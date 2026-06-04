@@ -33,6 +33,7 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         localStorage.removeItem("garment_token");
         localStorage.removeItem("garment_user");
+        localStorage.removeItem("garment_auth");
         set({ user: null, token: null, isAuthenticated: false });
       },
 

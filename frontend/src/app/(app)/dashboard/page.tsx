@@ -12,6 +12,15 @@ import {
   DollarSign,
   ShoppingBag,
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge } from "@/lib/utils";
 
@@ -38,6 +47,7 @@ interface DashboardData {
   outstandingPayments: { total: number; count: number };
   totalCustomers: number;
   topProducts: { productName: string; _sum: { quantity: number } }[];
+  totalProducts: number;
 }
 
 function StatCard({
@@ -104,6 +114,15 @@ export default function DashboardPage() {
     refetchInterval: 5 * 60 * 1000,
   });
 
+  const { data: salesTrend, isLoading: isSalesLoading } = useQuery({
+    queryKey: ["dashboard-sales-trend"],
+    queryFn: async () => {
+      const res = await api.get("/reports/sales-daily?days=7");
+      return res.data;
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+
   if (isLoading) {
     return (
       <div>
@@ -165,7 +184,7 @@ export default function DashboardPage() {
     },
     {
       title: "Total Products",
-      value: "–",
+      value: String(data?.totalProducts || 0),
       subtitle: "In inventory",
       icon: Package,
       color: "#ec4899",
@@ -210,8 +229,81 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Sales Trend Chart (Full Width) */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+        className="card"
+        style={{ marginBottom: "1.5rem" }}
+      >
+        <div className="card-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <TrendingUp size={16} color="var(--brand-600)" />
+            <span style={{ fontWeight: 600, fontSize: "0.9375rem" }}>Sales Performance (Last 7 Days)</span>
+          </div>
+          <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>Daily Revenue Trend</span>
+        </div>
+        <div className="card-body" style={{ padding: "1.25rem 1.25rem 0.5rem 1.25rem" }}>
+          {isSalesLoading ? (
+            <div className="skeleton" style={{ height: "220px", width: "100%" }} />
+          ) : salesTrend?.length ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={salesTrend}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--brand-600)" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="var(--brand-600)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "var(--text-secondary)" }}
+                  tickFormatter={(v) => {
+                    try {
+                      const d = new Date(v);
+                      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+                    } catch {
+                      return v;
+                    }
+                  }}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--text-secondary)" }}
+                  tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`}
+                />
+                <Tooltip
+                  formatter={(v: any) => formatCurrency(Number(v) || 0)}
+                  contentStyle={{
+                    background: "var(--bg-secondary)",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "0.5rem",
+                  }}
+                  labelStyle={{ color: "var(--text-primary)" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="var(--brand-600)"
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
+                  strokeWidth={2}
+                  name="Sales Revenue"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "180px", color: "var(--text-tertiary)", fontSize: "0.875rem" }}>
+              No sales data recorded in the last 7 days.
+            </div>
+          )}
+        </div>
+      </motion.div>
+
       {/* Two-column bottom */}
       <div
+        className="dashboard-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",

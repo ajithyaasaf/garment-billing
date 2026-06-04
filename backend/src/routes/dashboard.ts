@@ -18,6 +18,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     outstandingPayments,
     totalCustomers,
     topProducts,
+    totalProducts,
   ] = await Promise.all([
     // Today's sales total
     prisma.invoice.aggregate({
@@ -76,6 +77,8 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5,
     }),
+    // Total products
+    prisma.product.count(),
   ]);
 
   res.json({
@@ -96,6 +99,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     },
     totalCustomers,
     topProducts,
+    totalProducts,
   });
 });
 

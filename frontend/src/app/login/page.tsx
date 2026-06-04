@@ -31,9 +31,17 @@ export default function LoginPage() {
     },
   });
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
-    if (isAuthenticated) router.replace("/dashboard");
-  }, [isAuthenticated, router]);
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isHydrated, isAuthenticated, router]);
 
   const onSubmit = async (data: LoginForm) => {
     setLoading(true);
