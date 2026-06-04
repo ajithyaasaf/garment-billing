@@ -87,7 +87,7 @@ export default function OrdersPage() {
               {data?.data?.length ? data.data.map((order: Order) => (
                 <tr key={order.id}>
                   <td>
-                    <Link href={`/orders/${order.id}`} style={{ fontWeight: 600, color: "var(--brand-600)", textDecoration: "none" }}>
+                    <Link href={`/orders/${order.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
                       {order.orderNumber}
                     </Link>
                   </td>
@@ -123,6 +123,9 @@ export default function OrdersPage() {
                     <div className="empty-state" style={{ padding: "2rem" }}>
                       <ShoppingBag size={40} />
                       <p style={{ fontWeight: 600 }}>No orders found</p>
+                      <Link href="/orders/new" className="btn btn-primary btn-sm" style={{ marginTop: "0.5rem" }}>
+                        <Plus size={14} /> Create Order
+                      </Link>
                     </div>
                   </td>
                 </tr>

@@ -111,7 +111,7 @@ export default function InvoicesPage() {
                 data.data.map((inv: Invoice) => (
                   <tr key={inv.id}>
                     <td>
-                      <Link href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>
+                      <Link href={`/invoices/${inv.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
                         {inv.invoiceNumber}
                       </Link>
                     </td>

@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge } from "@/lib/utils";
+import Link from "next/link";
 
 function CustomDashboardTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
@@ -53,6 +54,7 @@ interface DashboardData {
   recentInvoices: {
     id: string;
     invoiceNumber: string;
+    customerId: string;
     totalAmount: number;
     paymentStatus: string;
     invoiceDate: string;
@@ -61,6 +63,7 @@ interface DashboardData {
   recentQuotations: {
     id: string;
     quotationNumber: string;
+    customerId: string;
     totalAmount: number;
     status: string;
     createdAt: string;
@@ -339,9 +342,9 @@ export default function DashboardPage() {
               <Receipt size={16} color="var(--brand-600)" />
               <span style={{ fontWeight: 600, fontSize: "0.9375rem" }}>Recent Invoices</span>
             </div>
-            <a href="/invoices" style={{ fontSize: "0.75rem", color: "var(--brand-600)", textDecoration: "none" }}>
+            <Link href="/invoices" className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontSize: "0.75rem" }}>
               View all →
-            </a>
+            </Link>
           </div>
           <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
             <table className="table">
@@ -358,18 +361,26 @@ export default function DashboardPage() {
                   data.recentInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td>
-                        <a
+                        <Link
                           href={`/invoices/${inv.id}`}
-                          style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 500 }}
+                          className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors"
+                          style={{ fontWeight: 500 }}
                         >
                           {inv.invoiceNumber}
-                        </a>
+                        </Link>
                         <br />
                         <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
                           {formatDate(inv.invoiceDate)}
                         </span>
                       </td>
-                      <td>{inv.customer.shopName}</td>
+                      <td style={{ fontWeight: 500 }}>
+                        <Link
+                          href={`/customers/${inv.customerId}`}
+                          className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors"
+                        >
+                          {inv.customer.shopName}
+                        </Link>
+                      </td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(inv.totalAmount)}</td>
                       <td>
                         <span className={`badge ${getPaymentStatusBadge(inv.paymentStatus)}`}>
@@ -466,7 +477,7 @@ export default function DashboardPage() {
                 { label: "Add Product", href: "/inventory/new", color: "#10b981" },
                 { label: "Add Customer", href: "/customers/new", color: "#f59e0b" },
               ].map((action) => (
-                <a
+                <Link
                   key={action.href}
                   href={action.href}
                   style={{
@@ -486,7 +497,7 @@ export default function DashboardPage() {
                   }}
                 >
                   {action.label}
-                </a>
+                </Link>
               ))}
             </div>
           </motion.div>

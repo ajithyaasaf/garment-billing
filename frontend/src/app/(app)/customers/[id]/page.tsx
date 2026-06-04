@@ -123,7 +123,7 @@ export default function CustomerDetailPage() {
                     customer.invoices.map((inv: any) => (
                       <tr key={inv.id}>
                         <td>
-                          <Link href={`/invoices/${inv.id}`} style={{ fontWeight: 600, color: "var(--brand-600)", textDecoration: "none" }}>
+                          <Link href={`/invoices/${inv.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
                             {inv.invoiceNumber}
                           </Link>
                         </td>
@@ -140,7 +140,12 @@ export default function CustomerDetailPage() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="empty-state" style={{ textAlign: "center", padding: "1.5rem" }}>
-                        No invoices created yet.
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                          <span>No invoices created yet.</span>
+                          <Link href={`/invoices/new?customerId=${customer.id}`} className="btn btn-primary btn-sm">
+                            Create Invoice
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -170,7 +175,7 @@ export default function CustomerDetailPage() {
                     customer.quotations.map((quo: any) => (
                       <tr key={quo.id}>
                         <td>
-                          <Link href={`/quotations/${quo.id}`} style={{ fontWeight: 600, color: "var(--brand-600)", textDecoration: "none" }}>
+                          <Link href={`/quotations/${quo.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
                             {quo.quotationNumber}
                           </Link>
                         </td>
@@ -187,7 +192,12 @@ export default function CustomerDetailPage() {
                   ) : (
                     <tr>
                       <td colSpan={4} className="empty-state" style={{ textAlign: "center", padding: "1.5rem" }}>
-                        No quotations created yet.
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                          <span>No quotations created yet.</span>
+                          <Link href={`/quotations/new?customerId=${customer.id}`} className="btn btn-secondary btn-sm">
+                            Create Quotation
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   )}

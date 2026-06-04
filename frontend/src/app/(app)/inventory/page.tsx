@@ -233,11 +233,10 @@ export default function InventoryPage() {
                         <div>
                           <Link
                             href={`/inventory/${product.id}`}
+                            className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors"
                             style={{
                               fontWeight: 600,
                               fontSize: "0.875rem",
-                              color: "var(--text-primary)",
-                              textDecoration: "none",
                             }}
                           >
                             {product.name}

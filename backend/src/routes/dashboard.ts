@@ -43,6 +43,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       select: {
         id: true,
         invoiceNumber: true,
+        customerId: true,
         totalAmount: true,
         paymentStatus: true,
         invoiceDate: true,
@@ -56,6 +57,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       select: {
         id: true,
         quotationNumber: true,
+        customerId: true,
         totalAmount: true,
         status: true,
         createdAt: true,

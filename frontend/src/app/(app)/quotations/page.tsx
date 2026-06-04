@@ -108,7 +108,7 @@ export default function QuotationsPage() {
               {data?.data?.length ? data.data.map((q: Quotation) => (
                 <tr key={q.id}>
                   <td>
-                    <Link href={`/quotations/${q.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>
+                    <Link href={`/quotations/${q.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
                       {q.quotationNumber}
                     </Link>
                   </td>
