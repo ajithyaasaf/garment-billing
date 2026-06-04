@@ -51,7 +51,6 @@ export default function SettingsPage() {
   const tabs = [
     { key: "business", label: "Business Profile", icon: Building2 },
     { key: "staff", label: "Staff Management", icon: Users },
-    { key: "invoice", label: "Invoice Settings", icon: SettingsIcon },
   ] as const;
 
   return (
