@@ -136,7 +136,12 @@ export default function OrderDetailPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2rem", marginBottom: "2.5rem" }}>
           <div>
             <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Customer Details</p>
-            <p style={{ fontWeight: 700, fontSize: "0.9375rem" }}>{order.customer.shopName}</p>
+            <p style={{ fontWeight: 700, fontSize: "0.9375rem" }}>
+              <Link href={`/customers/${order.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors no-print">
+                {order.customer.shopName}
+              </Link>
+              <span className="only-print">{order.customer.shopName}</span>
+            </p>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", marginTop: "0.25rem" }}>Prop: {order.customer.ownerName}</p>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>GSTIN: {order.customer.gstNumber || "N/A"}</p>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{order.customer.city}, {order.customer.state || "Tamil Nadu"}</p>

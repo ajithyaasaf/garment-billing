@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Phone, MapPin, Edit, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Search, Phone, MapPin, Edit, Trash2, ExternalLink, Eye } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { debounce, generateWhatsAppLink, formatCurrency } from "@/lib/utils";
@@ -131,11 +131,10 @@ export default function CustomersPage() {
                   <div>
                     <Link
                       href={`/customers/${customer.id}`}
+                      className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors"
                       style={{
                         fontWeight: 700,
                         fontSize: "0.9375rem",
-                        color: "var(--text-primary)",
-                        textDecoration: "none",
                         display: "block",
                         marginBottom: "0.25rem",
                       }}
@@ -147,13 +146,17 @@ export default function CustomersPage() {
                     </p>
                   </div>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
-                    <Link href={`/customers/${customer.id}/edit`} className="btn btn-ghost btn-sm btn-icon">
+                    <Link href={`/customers/${customer.id}`} className="btn btn-ghost btn-sm btn-icon" title="View Profile">
+                      <Eye size={14} />
+                    </Link>
+                    <Link href={`/customers/${customer.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit">
                       <Edit size={14} />
                     </Link>
                     <button
                       className="btn btn-ghost btn-sm btn-icon"
                       style={{ color: "var(--danger)" }}
                       onClick={() => handleDelete(customer.id)}
+                      title="Delete"
                     >
                       <Trash2 size={14} />
                     </button>

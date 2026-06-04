@@ -12,6 +12,7 @@ import Link from "next/link";
 interface Quotation {
   id: string;
   quotationNumber: string;
+  customerId: string;
   totalAmount: number;
   status: string;
   createdAt: string;
@@ -111,7 +112,11 @@ export default function QuotationsPage() {
                       {q.quotationNumber}
                     </Link>
                   </td>
-                  <td style={{ fontWeight: 500 }}>{q.customer.shopName}</td>
+                  <td style={{ fontWeight: 500 }}>
+                    <Link href={`/customers/${q.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
+                      {q.customer.shopName}
+                    </Link>
+                  </td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(q.createdAt)}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{q._count.items} items</td>
                   <td style={{ fontWeight: 700 }}>{formatCurrency(q.totalAmount)}</td>

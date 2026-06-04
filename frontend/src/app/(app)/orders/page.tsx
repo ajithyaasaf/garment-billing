@@ -12,6 +12,7 @@ import Link from "next/link";
 interface Order {
   id: string;
   orderNumber: string;
+  customerId: string;
   status: string;
   totalAmount: number;
   createdAt: string;
@@ -90,7 +91,11 @@ export default function OrdersPage() {
                       {order.orderNumber}
                     </Link>
                   </td>
-                  <td style={{ fontWeight: 500 }}>{order.customer.shopName}</td>
+                  <td style={{ fontWeight: 500 }}>
+                    <Link href={`/customers/${order.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
+                      {order.customer.shopName}
+                    </Link>
+                  </td>
                   <td style={{ color: "var(--text-secondary)" }}>{order._count.items} items</td>
                   <td style={{ fontWeight: 700 }}>{formatCurrency(order.totalAmount)}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(order.createdAt)}</td>

@@ -11,6 +11,7 @@ import Link from "next/link";
 interface Invoice {
   id: string;
   invoiceNumber: string;
+  customerId: string;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
@@ -114,7 +115,11 @@ export default function InvoicesPage() {
                         {inv.invoiceNumber}
                       </Link>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{inv.customer.shopName}</td>
+                    <td style={{ fontWeight: 500 }}>
+                      <Link href={`/customers/${inv.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
+                        {inv.customer.shopName}
+                      </Link>
+                    </td>
                     <td style={{ color: "var(--text-secondary)" }}>{formatDate(inv.invoiceDate)}</td>
                     <td style={{ color: "var(--text-secondary)" }}>{inv._count.items} items</td>
                     <td style={{ fontWeight: 700 }}>{formatCurrency(inv.totalAmount)}</td>

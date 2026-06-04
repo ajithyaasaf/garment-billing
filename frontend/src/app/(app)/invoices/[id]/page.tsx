@@ -35,6 +35,7 @@ interface InvoiceItem {
 interface Invoice {
   id: string;
   invoiceNumber: string;
+  customerId: string;
   totalAmount: number;
   paidAmount: number;
   dueAmount: number;
@@ -181,7 +182,12 @@ export default function InvoiceDetailPage() {
                 </div>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600 }}>Bill To</span>
-                  <div style={{ fontWeight: 700, fontSize: "1.05rem", marginTop: "0.25rem", color: "var(--brand-600)" }}>{invoice.customer.shopName}</div>
+                  <div style={{ fontWeight: 700, fontSize: "1.05rem", marginTop: "0.25rem" }}>
+                    <Link href={`/customers/${invoice.customerId}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors no-print">
+                      {invoice.customer.shopName}
+                    </Link>
+                    <span className="only-print" style={{ color: "var(--brand-600)" }}>{invoice.customer.shopName}</span>
+                  </div>
                   <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
                     Owner: {invoice.customer.ownerName}<br />
                     {invoice.customer.address && `${invoice.customer.address}, `}
