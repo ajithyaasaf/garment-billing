@@ -17,9 +17,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+
+      # =============================================================
+      # SAFE DATABASE MIGRATION DEPLOY (PRODUCTION BEST PRACTICE)
+      # =============================================================
+      - name: Deploy Database Migrations to Neon
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          cd backend
+          npx prisma migrate deploy
+
       - name: Install Git LFS
         run: git lfs install
 
+      # =============================================================
+      # DEPLOY CODE TO HUGGING FACE
+      # =============================================================
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -28,10 +53,10 @@ jobs:
           git config --global user.name "ajithyaasaf"
           git config --global user.email "ajithkannan.ag@gmail.com"
           
-          # Clone the Hugging Face Space repository (force clean clone)
+          # Clone the Hugging Face Space repository
           git clone https://yaasaf:$HF_TOKEN@huggingface.co/spaces/yaasaf/garment-erp-backend hf-space
           
-          # Clear existing contents of the Space repo (except git config metadata)
+          # Clear existing contents of the Space repo
           find hf-space -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
           
           # Copy the backend files to the Space repository
