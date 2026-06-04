@@ -284,6 +284,7 @@ model QuotationItem {
   variant     ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([quotationId])
+  @@index([productId])
   @@map("quotation_items")
 }
 
@@ -346,6 +347,7 @@ model InvoiceItem {
   variant     ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([invoiceId])
+  @@index([productId])
   @@map("invoice_items")
 }
 
@@ -403,6 +405,7 @@ model OrderItem {
   variant   ProductVariant? @relation(fields: [variantId], references: [id])
 
   @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
