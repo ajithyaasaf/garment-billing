@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { getStateFromGst } from '../lib/gst';
 
 const router = Router();
 router.use(authenticate);
@@ -67,11 +68,23 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/', async (req: AuthRequest, res: Response) => {
+  if (req.body.gstNumber) {
+    const derivedState = getStateFromGst(req.body.gstNumber);
+    if (derivedState) {
+      req.body.state = derivedState;
+    }
+  }
   const customer = await prisma.customer.create({ data: req.body });
   res.status(201).json(customer);
 });
 
 router.put('/:id', async (req: AuthRequest, res: Response) => {
+  if (req.body.gstNumber) {
+    const derivedState = getStateFromGst(req.body.gstNumber);
+    if (derivedState) {
+      req.body.state = derivedState;
+    }
+  }
   const customer = await prisma.customer.update({
     where: { id: req.params.id },
     data: req.body,

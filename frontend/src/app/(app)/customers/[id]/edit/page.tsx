@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
+import { getStateFromGst } from "@/lib/gst";
 
 interface CustomerForm {
   shopName: string;
@@ -38,10 +39,22 @@ export default function EditCustomerPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CustomerForm>({
     defaultValues: { state: "Tamil Nadu", creditLimit: 0, paymentTerms: "30 days" },
   });
+
+  const gstNumber = watch("gstNumber");
+
+  useEffect(() => {
+    if (gstNumber) {
+      const derivedState = getStateFromGst(gstNumber);
+      if (derivedState) {
+        setValue("state", derivedState);
+      }
+    }
+  }, [gstNumber, setValue]);
 
   useEffect(() => {
     if (customer) {

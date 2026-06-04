@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
@@ -8,6 +8,7 @@ import { Building2, Users, Settings as SettingsIcon, Save, Plus, Edit, Trash2, L
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store";
+import { getStateFromGst } from "@/lib/gst";
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -28,6 +29,23 @@ export default function SettingsPage() {
 
   const businessForm = useForm({ defaultValues: business });
   const staffForm = useForm();
+
+  useEffect(() => {
+    if (business) {
+      businessForm.reset(business);
+    }
+  }, [business, businessForm]);
+
+  const businessGstNumber = businessForm.watch("gstNumber");
+
+  useEffect(() => {
+    if (businessGstNumber) {
+      const derivedState = getStateFromGst(businessGstNumber);
+      if (derivedState) {
+        businessForm.setValue("state", derivedState);
+      }
+    }
+  }, [businessGstNumber, businessForm]);
 
   const businessMutation = useMutation({
     mutationFn: async (data: Record<string, unknown>) => (await api.put("/settings/business", data)).data,

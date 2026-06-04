@@ -81,6 +81,19 @@ function CustomPieTooltip({ active, payload }: any) {
   return null;
 }
 
+const getStateCode = (state: string): string => {
+  const s = (state || "").trim().toLowerCase();
+  if (s.includes("tamil")) return "33-Tamil Nadu";
+  if (s.includes("karnataka")) return "29-Karnataka";
+  if (s.includes("kerala")) return "32-Kerala";
+  if (s.includes("andhra")) return "37-Andhra Pradesh";
+  if (s.includes("telangana")) return "36-Telangana";
+  if (s.includes("maharashtra")) return "27-Maharashtra";
+  if (s.includes("delhi")) return "07-Delhi";
+  if (s.includes("gujarat")) return "24-Gujarat";
+  return "33-Tamil Nadu";
+};
+
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "gst" | "outstanding" | "profit">("overview");
   
@@ -140,44 +153,67 @@ export default function ReportsPage() {
     if (activeTab === "gst" && gstData) {
       filename = `GSTR1_Report_${selectedMonth}_${selectedYear}.xlsx`;
       headers = [
+        "GSTIN/UIN of Recipient",
+        "Receiver Name",
         "Invoice Number",
         "Invoice Date",
-        "Customer Name",
-        "GSTIN",
-        "Place of Supply (State)",
-        "Taxable Value (INR)",
-        "CGST (INR)",
-        "SGST (INR)",
-        "IGST (INR)",
-        "Total Invoice Value (INR)"
+        "Invoice Value",
+        "Place Of Supply",
+        "Reverse Charge",
+        "Applicable % of Tax Rate",
+        "Invoice Type",
+        "E-Commerce GSTIN",
+        "Taxable Value",
+        "Cess Amount"
       ];
       colWidths = [
+        { wch: 22 }, // GSTIN/UIN of Recipient
+        { wch: 25 }, // Receiver Name
         { wch: 18 }, // Invoice Number
         { wch: 15 }, // Invoice Date
-        { wch: 25 }, // Customer Name
-        { wch: 18 }, // GSTIN
-        { wch: 22 }, // Place of Supply (State)
-        { wch: 18 }, // Taxable Value (INR)
-        { wch: 12 }, // CGST (INR)
-        { wch: 12 }, // SGST (INR)
-        { wch: 12 }, // IGST (INR)
-        { wch: 22 }  // Total Invoice Value (INR)
+        { wch: 15 }, // Invoice Value
+        { wch: 22 }, // Place Of Supply
+        { wch: 15 }, // Reverse Charge
+        { wch: 25 }, // Applicable % of Tax Rate
+        { wch: 15 }, // Invoice Type
+        { wch: 18 }, // E-Commerce GSTIN
+        { wch: 18 }, // Taxable Value
+        { wch: 15 }  // Cess Amount
       ];
-      rows = (gstData.invoices || []).map((inv: any) => {
+
+      rows = [];
+      (gstData.invoices || []).forEach((inv: any) => {
         const d = new Date(inv.invoiceDate);
         const formattedDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-        return [
-          inv.invoiceNumber,
-          formattedDate,
-          inv.customer,
-          inv.gstNumber || "URP",
-          inv.state || "Tamil Nadu",
-          Number(inv.taxableAmount.toFixed(2)),
-          Number(inv.cgst.toFixed(2)),
-          Number(inv.sgst.toFixed(2)),
-          Number(inv.igst.toFixed(2)),
-          Number(inv.totalAmount.toFixed(2))
-        ];
+        const pos = getStateCode(inv.state);
+
+        const itemGroups: Record<number, { taxable: number; gst: number }> = {};
+        (inv.items || []).forEach((item: any) => {
+          const rate = item.gstPercent;
+          if (!itemGroups[rate]) {
+            itemGroups[rate] = { taxable: 0, gst: 0 };
+          }
+          itemGroups[rate].taxable += item.totalAmount - item.gstAmount;
+          itemGroups[rate].gst += item.gstAmount;
+        });
+
+        Object.entries(itemGroups).forEach(([rateStr, group]) => {
+          const rate = Number(rateStr);
+          rows.push([
+            inv.gstNumber || "",
+            inv.customer,
+            inv.invoiceNumber,
+            formattedDate,
+            Number(inv.totalAmount.toFixed(2)),
+            pos,
+            "N",
+            rate,
+            inv.gstNumber ? "Regular" : "B2C",
+            "",
+            Number(group.taxable.toFixed(2)),
+            0.00
+          ]);
+        });
       });
     } else if (activeTab === "products" && productSales) {
       filename = `Product_Sales_Report.xlsx`;
@@ -240,7 +276,7 @@ export default function ReportsPage() {
     worksheet["!cols"] = colWidths;
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Report Data");
+    XLSX.utils.book_append_sheet(workbook, worksheet, activeTab === "gst" ? "GST Report" : "Report Data");
     XLSX.writeFile(workbook, filename);
   };
 

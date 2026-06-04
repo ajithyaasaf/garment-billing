@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -8,6 +9,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
+import { getStateFromGst } from "@/lib/gst";
 
 interface CustomerForm {
   shopName: string;
@@ -29,10 +31,23 @@ export default function NewCustomerPage() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CustomerForm>({
     defaultValues: { state: "Tamil Nadu", creditLimit: 0, paymentTerms: "30 days" },
   });
+
+  const gstNumber = watch("gstNumber");
+
+  useEffect(() => {
+    if (gstNumber) {
+      const derivedState = getStateFromGst(gstNumber);
+      if (derivedState) {
+        setValue("state", derivedState);
+      }
+    }
+  }, [gstNumber, setValue]);
 
   const mutation = useMutation({
     mutationFn: async (data: CustomerForm) => (await api.post("/customers", { ...data, creditLimit: Number(data.creditLimit) })).data,

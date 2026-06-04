@@ -123,7 +123,7 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
   });
 
   const gstSummary: Record<number, { rate: number; taxable: number; gst: number }> = {};
-  
+
   let totalTaxable = 0;
   let totalGst = 0;
   let totalCgst = 0;
@@ -132,19 +132,19 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
 
   for (const inv of invoices) {
     const isLocal = (inv.customer.state || 'Tamil Nadu').trim().toLowerCase() === businessState;
-    
+
     for (const item of inv.items) {
       if (!gstSummary[item.gstPercent]) {
         gstSummary[item.gstPercent] = { rate: item.gstPercent, taxable: 0, gst: 0 };
       }
-      
+
       const itemTaxable = item.totalAmount - item.gstAmount;
       gstSummary[item.gstPercent].taxable += itemTaxable;
       gstSummary[item.gstPercent].gst += item.gstAmount;
-      
+
       totalTaxable += itemTaxable;
       totalGst += item.gstAmount;
-      
+
       if (isLocal) {
         totalCgst += item.gstAmount / 2;
         totalSgst += item.gstAmount / 2;
@@ -185,6 +185,7 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
         igst: isLocal ? 0 : Math.round(invGst * 100) / 100,
         taxAmount: Math.round(invGst * 100) / 100,
         totalAmount: Math.round(inv.totalAmount * 100) / 100,
+        items: inv.items,
       };
     }),
   });

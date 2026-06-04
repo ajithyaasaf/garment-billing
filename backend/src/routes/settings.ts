@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { getStateFromGst } from '../lib/gst';
 
 const router = Router();
 router.use(authenticate);
@@ -19,6 +20,12 @@ router.get('/business', async (_req, res: Response) => {
 
 // PUT /api/settings/business
 router.put('/business', requireAdmin, async (req: AuthRequest, res: Response) => {
+  if (req.body.gstNumber) {
+    const derivedState = getStateFromGst(req.body.gstNumber);
+    if (derivedState) {
+      req.body.state = derivedState;
+    }
+  }
   let profile = await prisma.businessProfile.findFirst();
   if (profile) {
     profile = await prisma.businessProfile.update({
