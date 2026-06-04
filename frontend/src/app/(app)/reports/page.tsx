@@ -13,6 +13,72 @@ import { formatCurrency, formatNumber } from "@/lib/utils";
 
 const COLORS = ["#3b82f6", "#6366f1", "#10b981", "#f59e0b", "#ef4444"];
 
+// Premium custom tooltip components
+function CustomMonthlyTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: "white",
+        border: "1px solid var(--border-color)",
+        padding: "0.75rem 1rem",
+        borderRadius: "0.625rem",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+      }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>{label}</p>
+        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.875rem", color: "#3b82f6", fontWeight: 700 }}>
+          Revenue: {formatCurrency(payload[0].value)}
+        </p>
+        {payload[1] && (
+          <p style={{ margin: "0.125rem 0 0 0", fontSize: "0.875rem", color: "#10b981", fontWeight: 700 }}>
+            Collected: {formatCurrency(payload[1].value)}
+          </p>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+function CustomDailyTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: "white",
+        border: "1px solid var(--border-color)",
+        padding: "0.75rem 1rem",
+        borderRadius: "0.625rem",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+      }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 500 }}>{label}</p>
+        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9375rem", color: "#3b82f6", fontWeight: 700 }}>
+          Sales: {formatCurrency(payload[0].value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
+function CustomPieTooltip({ active, payload }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: "white",
+        border: "1px solid var(--border-color)",
+        padding: "0.75rem 1rem",
+        borderRadius: "0.625rem",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+      }}>
+        <p style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-primary)" }}>{payload[0].name}</p>
+        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.875rem", color: "var(--brand-600)", fontWeight: 700 }}>
+          {formatCurrency(payload[0].value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "gst" | "outstanding" | "profit">("overview");
 
@@ -146,8 +212,9 @@ export default function ReportsPage() {
             </div>
           ) : monthlySales ? (
             <div className="card">
-              <div className="card-header">
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 600 }}>Monthly Revenue – {new Date().getFullYear()}</span>
+                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>12 months</span>
               </div>
               <div className="card-body">
                 <ResponsiveContainer width="100%" height={280}>
@@ -155,7 +222,7 @@ export default function ReportsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--text-secondary)" }} />
                     <YAxis tick={{ fontSize: 12, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} labelStyle={{ color: "var(--text-primary)" }} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                    <Tooltip content={<CustomMonthlyTooltip />} />
                     <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f615" strokeWidth={2} name="Revenue" />
                     <Area type="monotone" dataKey="collected" stroke="#10b981" fill="#10b98115" strokeWidth={2} name="Collected" />
                   </AreaChart>
@@ -172,8 +239,9 @@ export default function ReportsPage() {
             </div>
           ) : dailySales ? (
             <div className="card">
-              <div className="card-header">
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 600 }}>Daily Sales – Last 30 Days</span>
+                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>30 days</span>
               </div>
               <div className="card-body">
                 <ResponsiveContainer width="100%" height={220}>
@@ -181,8 +249,8 @@ export default function ReportsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} tickFormatter={(v) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
-                    <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Revenue" />
+                    <Tooltip cursor={{ fill: "rgba(0, 0, 0, 0.02)" }} content={<CustomDailyTooltip />} />
+                    <Bar dataKey="revenue" fill="#3b82f6" radius={[6, 6, 0, 0]} name="Revenue" barSize={16} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -209,7 +277,10 @@ export default function ReportsPage() {
         ) : productSales ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
             <div className="card">
-              <div className="card-header"><span style={{ fontWeight: 600 }}>Top Selling Products</span></div>
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Top Selling Products</span>
+                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(99, 102, 241, 0.1)", color: "#6366f1", fontWeight: 600 }}>{productSales.length} items</span>
+              </div>
               <div className="card-body">
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   {productSales.map((p: { productName: string; _sum: { quantity: number; totalAmount: number } }, i: number) => (
@@ -226,17 +297,36 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="card">
-              <div className="card-header"><span style={{ fontWeight: 600 }}>Sales by Product</span></div>
-              <div className="card-body">
-                <ResponsiveContainer width="100%" height={300}>
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Sales by Product</span>
+                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(99, 102, 241, 0.1)", color: "#6366f1", fontWeight: 600 }}>Top 5</span>
+              </div>
+              <div className="card-body" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie data={productSales.slice(0, 5).map((p: { productName: string; _sum: { totalAmount: number } }) => ({ name: p.productName, value: p._sum.totalAmount || 0 }))}
-                      cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${(name || "").slice(0, 12)} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
+                    <Pie
+                      data={productSales.slice(0, 5).map((p: { productName: string; _sum: { totalAmount: number } }) => ({ name: p.productName, value: p._sum.totalAmount || 0 }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
                       {productSales.slice(0, 5).map((_: unknown, index: number) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                     </Pie>
-                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                    <Tooltip content={<CustomPieTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
+                {/* Custom dot-based legend positioned below the donut chart */}
+                <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "1rem", marginTop: "1rem" }}>
+                  {productSales.slice(0, 5).map((p: any, idx: number) => (
+                    <div key={p.productName} style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem" }}>
+                      <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: COLORS[idx % COLORS.length] }} />
+                      <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{p.productName.slice(0, 14)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -254,7 +344,10 @@ export default function ReportsPage() {
           </div>
         ) : customerSales ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-            <div className="card-header"><span style={{ fontWeight: 600 }}>Customer-wise Sales</span></div>
+            <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 600 }}>Customer-wise Sales</span>
+              <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", fontWeight: 600 }}>{customerSales.length} active</span>
+            </div>
             <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
               <table className="table">
                 <thead>
@@ -321,7 +414,10 @@ export default function ReportsPage() {
               ))}
             </div>
             <div className="card">
-              <div className="card-header"><span style={{ fontWeight: 600 }}>Outstanding Invoices</span></div>
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Outstanding Invoices</span>
+                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", fontWeight: 600 }}>{outstanding.count} invoices</span>
+              </div>
               <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
                 <table className="table">
                   <thead>
@@ -382,16 +478,34 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div className="card card-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={[{ name: "Gross Profit", value: profit.grossProfit }, { name: "Cost", value: profit.costOfGoods }]}
-                      cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
+                    <Pie
+                      data={[{ name: "Gross Profit", value: profit.grossProfit }, { name: "Cost", value: profit.costOfGoods }]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={65}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
                       <Cell fill="#10b981" />
                       <Cell fill="#f59e0b" />
                     </Pie>
-                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                    <Tooltip content={<CustomPieTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
+                {/* Custom dot-based legend positioned below the P&L donut chart */}
+                <div style={{ display: "flex", justifyContent: "center", gap: "1.5rem", marginTop: "1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem" }}>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981" }} />
+                    <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Gross Profit</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem" }}>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b" }} />
+                    <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>Cost</span>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

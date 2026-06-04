@@ -24,6 +24,28 @@ import {
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge } from "@/lib/utils";
 
+function CustomDashboardTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: "white",
+        border: "1px solid var(--border-color)",
+        padding: "0.75rem 1rem",
+        borderRadius: "0.625rem",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+      }}>
+        <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>
+          {new Date(label).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+        </p>
+        <p style={{ margin: "0.25rem 0 0 0", fontSize: "0.9375rem", color: "var(--brand-600)", fontWeight: 700 }}>
+          {formatCurrency(payload[0].value)} Sales
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
 interface DashboardData {
   todaySales: { total: number; count: number };
   monthlySales: { total: number; count: number };
@@ -242,7 +264,7 @@ export default function DashboardPage() {
             <TrendingUp size={16} color="var(--brand-600)" />
             <span style={{ fontWeight: 600, fontSize: "0.9375rem" }}>Sales Performance (Last 7 Days)</span>
           </div>
-          <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>Daily Revenue Trend</span>
+          <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>7 days</span>
         </div>
         <div className="card-body" style={{ padding: "1.25rem 1.25rem 0.5rem 1.25rem" }}>
           {isSalesLoading ? (
@@ -273,15 +295,7 @@ export default function DashboardPage() {
                   tick={{ fontSize: 10, fill: "var(--text-secondary)" }}
                   tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`}
                 />
-                <Tooltip
-                  formatter={(v: any) => formatCurrency(Number(v) || 0)}
-                  contentStyle={{
-                    background: "var(--bg-secondary)",
-                    border: "1px solid var(--border-color)",
-                    borderRadius: "0.5rem",
-                  }}
-                  labelStyle={{ color: "var(--text-primary)" }}
-                />
+                <Tooltip content={<CustomDashboardTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="revenue"
