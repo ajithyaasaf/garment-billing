@@ -85,7 +85,11 @@ export default function OrdersPage() {
             <tbody>
               {data?.data?.length ? data.data.map((order: Order) => (
                 <tr key={order.id}>
-                  <td style={{ fontWeight: 600, color: "var(--brand-600)" }}>{order.orderNumber}</td>
+                  <td>
+                    <Link href={`/orders/${order.id}`} style={{ fontWeight: 600, color: "var(--brand-600)", textDecoration: "none" }}>
+                      {order.orderNumber}
+                    </Link>
+                  </td>
                   <td style={{ fontWeight: 500 }}>{order.customer.shopName}</td>
                   <td style={{ color: "var(--text-secondary)" }}>{order._count.items} items</td>
                   <td style={{ fontWeight: 700 }}>{formatCurrency(order.totalAmount)}</td>

@@ -75,4 +75,84 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
   res.json(order);
 });
 
+router.get('/:id', async (req: AuthRequest, res: Response) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: {
+      customer: true,
+      createdBy: { select: { name: true } },
+      items: {
+        include: {
+          product: { select: { name: true, sku: true, gstPercent: true } },
+          variant: { select: { color: true, size: true } },
+        },
+      },
+    },
+  });
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  res.json(order);
+});
+
+router.post('/:id/convert', async (req: AuthRequest, res: Response) => {
+  const order = await prisma.order.findUnique({
+    where: { id: req.params.id },
+    include: { items: { include: { product: true, variant: true } } },
+  });
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  const existingInvoice = await prisma.invoice.findFirst({ where: { orderId: order.id } });
+  if (existingInvoice) return res.status(400).json({ error: 'Already converted to invoice' });
+
+  let subtotal = 0;
+  let taxAmount = 0;
+
+  const invoiceItems = order.items.map((item) => {
+    const gstPercent = item.product.gstPercent || 5;
+    const itemSubtotal = item.quantity * item.unitPrice;
+    const gst = itemSubtotal * (gstPercent / 100);
+    subtotal += itemSubtotal;
+    taxAmount += gst;
+    
+    return {
+      productId: item.productId,
+      variantId: item.variantId,
+      productName: item.productName,
+      color: item.variant?.color,
+      size: item.variant?.size,
+      sku: item.product.sku,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      gstPercent,
+      gstAmount: gst,
+      totalAmount: itemSubtotal + gst,
+      discount: 0,
+    };
+  });
+
+  const totalAmount = subtotal + taxAmount;
+  const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      invoiceNumber,
+      customerId: order.customerId,
+      createdById: req.user!.id,
+      orderId: order.id,
+      subtotal,
+      taxAmount,
+      totalAmount,
+      dueAmount: totalAmount,
+      notes: order.notes,
+      items: { create: invoiceItems },
+    },
+  });
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'COMPLETED' },
+  });
+
+  res.status(201).json(invoice);
+});
+
 export default router;
