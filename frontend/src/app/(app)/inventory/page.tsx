@@ -93,16 +93,7 @@ export default function InventoryPage() {
   return (
     <div>
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "1.25rem",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>
             Inventory
@@ -111,12 +102,12 @@ export default function InventoryPage() {
             {data?.meta?.total || 0} products
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Link href="/inventory/stock" className="btn btn-secondary btn-sm">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Link href="/inventory/stock" className="btn btn-secondary btn-sm flex-1 sm:flex-initial">
             <RefreshCw size={15} />
             Stock Operations
           </Link>
-          <Link href="/inventory/new" className="btn btn-primary btn-sm">
+          <Link href="/inventory/new" className="btn btn-primary btn-sm flex-1 sm:flex-initial">
             <Plus size={15} />
             Add Product
           </Link>
@@ -124,23 +115,15 @@ export default function InventoryPage() {
       </div>
 
       {/* Filters */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.75rem",
-          marginBottom: "1.25rem",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+      <div className="flex flex-col sm:flex-row gap-3 mb-5 items-stretch sm:items-center">
+        <div className="relative flex-1">
           <Search
             size={15}
             color="var(--text-tertiary)"
             style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
           />
           <input
-            className="form-input"
+            className="form-input w-full"
             style={{ paddingLeft: "2.25rem" }}
             placeholder="Search by name, SKU, brand..."
             value={search}
@@ -152,8 +135,7 @@ export default function InventoryPage() {
         </div>
 
         <select
-          className="form-input form-select"
-          style={{ width: "auto", minWidth: "140px" }}
+          className="form-input form-select w-full sm:w-auto sm:min-w-[140px]"
           value={genderFilter}
           onChange={(e) => { setGenderFilter(e.target.value); setPage(1); }}
         >
@@ -180,12 +162,12 @@ export default function InventoryPage() {
             }}
             placeholder="All Categories"
             searchPlaceholder="Search category..."
-            className="w-auto min-w-[160px]"
+            className="w-full sm:w-auto sm:min-w-[160px]"
           />
         )}
 
         <button
-          className={`btn btn-sm ${lowStockOnly ? "btn-primary" : "btn-secondary"}`}
+          className={`btn btn-sm w-full sm:w-auto ${lowStockOnly ? "btn-primary" : "btn-secondary"}`}
           onClick={() => { setLowStockOnly(!lowStockOnly); setPage(1); }}
         >
           <AlertTriangle size={14} />

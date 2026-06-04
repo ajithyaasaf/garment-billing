@@ -123,10 +123,10 @@ export default function StockOperationsPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: "1.25rem", alignItems: "start" }}>
-        
+
         {/* Left Column - Action Form */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          
+
           <div className="card">
             <div className="card-header">
               <span style={{ fontWeight: 600 }}>New Stock Action</span>
@@ -242,7 +242,7 @@ export default function StockOperationsPage() {
                           onChange={(e) => setQuantity(Number(e.target.value))}
                         />
                       </div>
-                      
+
                       {opType === "inward" && (
                         <div className="form-group">
                           <label className="form-label">Invoice Ref (optional)</label>

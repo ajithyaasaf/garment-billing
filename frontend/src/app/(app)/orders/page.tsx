@@ -40,23 +40,23 @@ export default function OrdersPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>Orders</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>{data?.meta?.total || 0} orders</p>
         </div>
-        <Link href="/orders/new" className="btn btn-primary btn-sm">
+        <Link href="/orders/new" className="btn btn-primary btn-sm w-full sm:w-auto">
           <Plus size={15} />
           New Order
         </Link>
       </div>
 
       {/* Status Filter */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
+      <div className="grid grid-cols-4 sm:flex gap-2 mb-5">
         {["", "PENDING", "COMPLETED", "CANCELLED"].map((s) => (
           <button
             key={s}
-            className={`btn btn-sm ${statusFilter === s ? "btn-primary" : "btn-secondary"}`}
+            className={`btn btn-sm justify-center ${statusFilter === s ? "btn-primary" : "btn-secondary"}`}
             onClick={() => setStatusFilter(s)}
           >
             {s || "All"}

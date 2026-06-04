@@ -66,9 +66,8 @@ export default function CustomerDetailPage() {
 
   return (
     <div style={{ maxWidth: "1000px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3">
           <Link href="/customers" className="btn btn-ghost btn-sm btn-icon">
             <ArrowLeft size={16} />
           </Link>
@@ -77,8 +76,8 @@ export default function CustomerDetailPage() {
             <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>Proprietor: {customer.ownerName}</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <Link href={`/customers/${id}/edit`} className="btn btn-secondary btn-sm">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
+          <Link href={`/customers/${id}/edit`} className="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center">
             <Edit size={14} />
             Edit Customer
           </Link>
@@ -86,24 +85,23 @@ export default function CustomerDetailPage() {
             href={generateWhatsAppLink(customer.whatsapp, `Dear ${customer.ownerName},\nThis is regarding...`)}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-secondary btn-sm"
+            className="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center"
             style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}
           >
             <Phone size={14} />
             WhatsApp
           </a>
-          <button className="btn btn-secondary btn-sm" style={{ color: "var(--danger)" }} onClick={handleDelete} disabled={deleteMutation.isPending}>
+          <button className="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center" style={{ color: "var(--danger)" }} onClick={handleDelete} disabled={deleteMutation.isPending}>
             <Trash2 size={14} />
             Delete
           </button>
         </div>
       </div>
 
-      {/* Grid Layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1.2fr", gap: "1.25rem", alignItems: "start" }}>
-        
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+
         {/* Left Column - History Tables */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="lg:col-span-2 flex flex-col gap-5">
           {/* Recent Invoices */}
           <div className="card">
             <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -132,9 +130,8 @@ export default function CustomerDetailPage() {
                         <td>{new Date(inv.invoiceDate || inv.createdAt).toLocaleDateString("en-IN")}</td>
                         <td style={{ fontWeight: 700 }}>{formatCurrency(inv.totalAmount)}</td>
                         <td>
-                          <span className={`badge ${
-                            inv.paymentStatus === "PAID" ? "badge-success" : inv.paymentStatus === "PARTIAL" ? "badge-warning" : "badge-danger"
-                          }`}>
+                          <span className={`badge ${inv.paymentStatus === "PAID" ? "badge-success" : inv.paymentStatus === "PARTIAL" ? "badge-warning" : "badge-danger"
+                            }`}>
                             {inv.paymentStatus}
                           </span>
                         </td>
@@ -180,9 +177,8 @@ export default function CustomerDetailPage() {
                         <td>{new Date(quo.createdAt).toLocaleDateString("en-IN")}</td>
                         <td style={{ fontWeight: 700 }}>{formatCurrency(quo.totalAmount)}</td>
                         <td>
-                          <span className={`badge ${
-                            quo.status === "CONVERTED" ? "badge-success" : "badge-gray"
-                          }`}>
+                          <span className={`badge ${quo.status === "CONVERTED" ? "badge-success" : "badge-gray"
+                            }`}>
                             {quo.status}
                           </span>
                         </td>
@@ -202,7 +198,7 @@ export default function CustomerDetailPage() {
         </div>
 
         {/* Right Column - Analytics and Details */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="lg:col-span-1 flex flex-col gap-5">
           {/* Financial Metrics */}
           <div className="card">
             <div className="card-header">
@@ -236,7 +232,7 @@ export default function CustomerDetailPage() {
           {analytics && (
             <div className="card" style={{ padding: "1.25rem" }}>
               <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.875rem" }}>Customer Analytics</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div style={{ background: "var(--bg-tertiary)", padding: "0.75rem", borderRadius: "0.5rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>
                     <ShoppingCart size={13} />

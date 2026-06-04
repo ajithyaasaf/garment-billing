@@ -61,38 +61,29 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "1.25rem",
-          flexWrap: "wrap",
-          gap: "0.75rem",
-        }}
-      >
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>Customers</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
             {data?.meta?.total || 0} active customers
           </p>
         </div>
-        <Link href="/customers/new" className="btn btn-primary btn-sm">
+        <Link href="/customers/new" className="btn btn-primary btn-sm w-full sm:w-auto">
           <Plus size={15} />
           Add Customer
         </Link>
       </div>
 
       {/* Search */}
-      <div style={{ position: "relative", marginBottom: "1.25rem" }}>
+      <div className="relative mb-5 w-full max-w-[400px]">
         <Search
           size={15}
           color="var(--text-tertiary)"
           style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
         />
         <input
-          className="form-input"
-          style={{ paddingLeft: "2.25rem", maxWidth: "400px" }}
+          className="form-input w-full"
+          style={{ paddingLeft: "2.25rem" }}
           placeholder="Search shop name, owner, phone..."
           value={search}
           onChange={(e) => {

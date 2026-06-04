@@ -162,9 +162,9 @@ export default function NewInvoicePage() {
       </div>
 
       <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           {/* Left Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          <div className="lg:col-span-2 flex flex-col gap-5">
             {/* Customer Selection */}
             <div className="card">
               <div className="card-header">
@@ -414,7 +414,7 @@ export default function NewInvoicePage() {
           </div>
 
           {/* Right Column – Summary */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", position: "sticky", top: "80px" }}>
+          <div className="lg:col-span-1 flex flex-col gap-4 lg:sticky lg:top-20">
             <div className="card">
               <div className="card-header">
                 <span style={{ fontWeight: 600 }}>Payment Summary</span>

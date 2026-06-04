@@ -58,29 +58,31 @@ export default function QuotationsPage() {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>Quotations</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>{data?.meta?.total || 0} quotations</p>
         </div>
-        <Link href="/quotations/new" className="btn btn-primary btn-sm">
+        <Link href="/quotations/new" className="btn btn-primary btn-sm w-full sm:w-auto">
           <Plus size={15} />
           New Quotation
         </Link>
       </div>
 
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: 1, minWidth: "200px" }}>
+      <div className="flex flex-col sm:flex-row gap-3 mb-5 items-stretch sm:items-center">
+        <div className="relative flex-1">
           <Search size={15} color="var(--text-tertiary)" style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }} />
-          <input className="form-input" style={{ paddingLeft: "2.25rem" }} placeholder="Quotation #, customer..." value={search}
+          <input className="form-input w-full" style={{ paddingLeft: "2.25rem" }} placeholder="Quotation #, customer..." value={search}
             onChange={(e) => { setSearch(e.target.value); debouncedSetSearch(e.target.value); }} />
         </div>
-        {["DRAFT", "SENT", "ACCEPTED", "CONVERTED", "REJECTED"].map((s) => (
-          <button key={s} className={`btn btn-sm ${statusFilter === s ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => { setStatusFilter(statusFilter === s ? "" : s); setPage(1); }}>
-            {s}
-          </button>
-        ))}
+        <div className="grid grid-cols-3 sm:flex gap-2">
+          {["DRAFT", "SENT", "ACCEPTED", "CONVERTED", "REJECTED"].map((s) => (
+            <button key={s} className={`btn btn-sm justify-center ${statusFilter === s ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => { setStatusFilter(statusFilter === s ? "" : s); setPage(1); }}>
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="table-container">

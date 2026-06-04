@@ -274,8 +274,8 @@ export default function DashboardPage() {
               <AreaChart data={salesTrend}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--brand-600)" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="var(--brand-600)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--brand-600)" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="var(--brand-600)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />

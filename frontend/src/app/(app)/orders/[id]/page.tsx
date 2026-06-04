@@ -86,7 +86,7 @@ export default function OrderDetailPage() {
             <Printer size={14} />
             Print
           </button>
-          
+
           {order.status === "PENDING" && (
             <button
               className="btn btn-primary btn-sm"
