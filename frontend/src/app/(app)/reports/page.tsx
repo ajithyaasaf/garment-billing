@@ -16,34 +16,40 @@ const COLORS = ["#3b82f6", "#6366f1", "#10b981", "#f59e0b", "#ef4444"];
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "gst" | "outstanding" | "profit">("overview");
 
-  const { data: dailySales } = useQuery({
+  const { data: dailySales, isLoading: isLoadingDaily } = useQuery({
     queryKey: ["report-daily"],
     queryFn: async () => (await api.get("/reports/sales-daily?days=30")).data,
+    enabled: activeTab === "overview",
   });
 
-  const { data: monthlySales } = useQuery({
+  const { data: monthlySales, isLoading: isLoadingMonthly } = useQuery({
     queryKey: ["report-monthly"],
     queryFn: async () => (await api.get(`/reports/sales-monthly?year=${new Date().getFullYear()}`)).data,
+    enabled: activeTab === "overview",
   });
 
-  const { data: productSales } = useQuery({
+  const { data: productSales, isLoading: isLoadingProducts } = useQuery({
     queryKey: ["report-products"],
     queryFn: async () => (await api.get("/reports/product-sales?limit=10")).data,
+    enabled: activeTab === "products",
   });
 
-  const { data: customerSales } = useQuery({
+  const { data: customerSales, isLoading: isLoadingCustomers } = useQuery({
     queryKey: ["report-customers"],
     queryFn: async () => (await api.get("/reports/customer-sales")).data,
+    enabled: activeTab === "customers",
   });
 
-  const { data: outstanding } = useQuery({
+  const { data: outstanding, isLoading: isLoadingOutstanding } = useQuery({
     queryKey: ["report-outstanding"],
     queryFn: async () => (await api.get("/reports/outstanding")).data,
+    enabled: activeTab === "outstanding",
   });
 
-  const { data: profit } = useQuery({
+  const { data: profit, isLoading: isLoadingProfit } = useQuery({
     queryKey: ["report-profit"],
     queryFn: async () => (await api.get("/reports/profit")).data,
+    enabled: activeTab === "overview" || activeTab === "profit",
   });
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -91,10 +97,25 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      {/* Overview Tab */}
       {activeTab === "overview" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           {/* Profit summary cards */}
-          {profit && (
+          {isLoadingProfit ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="stat-card">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", width: "70%" }}>
+                      <div className="skeleton" style={{ width: "90px", height: "0.75rem" }} />
+                      <div className="skeleton" style={{ width: "130px", height: "1.5rem", marginTop: "0.25rem" }} />
+                    </div>
+                    <div className="skeleton" style={{ width: "2.5rem", height: "2.5rem", borderRadius: "var(--radius-lg)" }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : profit ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
               {[
                 { label: "Total Revenue", value: formatCurrency(profit.revenue), icon: TrendingUp, color: "#3b82f6" },
@@ -115,10 +136,15 @@ export default function ReportsPage() {
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
 
           {/* Monthly Revenue Chart */}
-          {monthlySales && (
+          {isLoadingMonthly ? (
+            <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
+              <div className="skeleton" style={{ width: "200px", height: "1rem" }} />
+              <div className="skeleton" style={{ width: "100%", height: "280px" }} />
+            </div>
+          ) : monthlySales ? (
             <div className="card">
               <div className="card-header">
                 <span style={{ fontWeight: 600 }}>Monthly Revenue – {new Date().getFullYear()}</span>
@@ -136,10 +162,15 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Daily Sales (last 30d) */}
-          {dailySales && (
+          {isLoadingDaily ? (
+            <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
+              <div className="skeleton" style={{ width: "180px", height: "1rem" }} />
+              <div className="skeleton" style={{ width: "100%", height: "220px" }} />
+            </div>
+          ) : dailySales ? (
             <div className="card">
               <div className="card-header">
                 <span style={{ fontWeight: 600 }}>Daily Sales – Last 30 Days</span>
@@ -156,155 +187,218 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-          )}
+          ) : null}
         </motion.div>
       )}
 
-      {activeTab === "products" && productSales && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-          <div className="card">
-            <div className="card-header"><span style={{ fontWeight: 600 }}>Top Selling Products</span></div>
-            <div className="card-body">
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {productSales.map((p: { productName: string; _sum: { quantity: number; totalAmount: number } }, i: number) => (
-                  <div key={p.productName} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                    <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", background: `${COLORS[i % COLORS.length]}15`, color: COLORS[i % COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem" }}>{i + 1}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{p.productName}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{formatNumber(p._sum.quantity || 0)} units sold</div>
+      {/* Products Tab */}
+      {activeTab === "products" && (
+        isLoadingProducts ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "150px", height: "1rem" }} />
+              {Array(6).fill(null).map((_, i) => (
+                <div key={i} className="skeleton" style={{ width: "100%", height: "2rem" }} />
+              ))}
+            </div>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "150px", height: "1rem" }} />
+              <div className="skeleton" style={{ width: "100%", height: "240px" }} />
+            </div>
+          </div>
+        ) : productSales ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+            <div className="card">
+              <div className="card-header"><span style={{ fontWeight: 600 }}>Top Selling Products</span></div>
+              <div className="card-body">
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {productSales.map((p: { productName: string; _sum: { quantity: number; totalAmount: number } }, i: number) => (
+                    <div key={p.productName} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", background: `${COLORS[i % COLORS.length]}15`, color: COLORS[i % COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem" }}>{i + 1}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{p.productName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{formatNumber(p._sum.quantity || 0)} units sold</div>
+                      </div>
+                      <div style={{ fontWeight: 700 }}>{formatCurrency(p._sum.totalAmount || 0)}</div>
                     </div>
-                    <div style={{ fontWeight: 700 }}>{formatCurrency(p._sum.totalAmount || 0)}</div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          <div className="card">
-            <div className="card-header"><span style={{ fontWeight: 600 }}>Sales by Product</span></div>
-            <div className="card-body">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie data={productSales.slice(0, 5).map((p: { productName: string; _sum: { totalAmount: number } }) => ({ name: p.productName, value: p._sum.totalAmount || 0 }))}
-                    cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${(name || "").slice(0, 12)} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
-                    {productSales.slice(0, 5).map((_: unknown, index: number) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {activeTab === "customers" && customerSales && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1}} className="card">
-          <div className="card-header"><span style={{ fontWeight: 600 }}>Customer-wise Sales</span></div>
-          <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Shop Name</th>
-                  <th>City</th>
-                  <th>Total Purchases</th>
-                  <th>Paid</th>
-                  <th>Outstanding</th>
-                  <th>Invoices</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customerSales.map((c: { customerId: string; shopName: string; city: string; _sum: { totalAmount: number; paidAmount: number; dueAmount: number }; _count: number }, i: number) => (
-                  <tr key={c.customerId}>
-                    <td style={{ color: "var(--text-tertiary)" }}>{i + 1}</td>
-                    <td style={{ fontWeight: 600 }}>{c.shopName}</td>
-                    <td style={{ color: "var(--text-secondary)" }}>{c.city}</td>
-                    <td style={{ fontWeight: 700 }}>{formatCurrency(c._sum.totalAmount || 0)}</td>
-                    <td style={{ color: "var(--success)", fontWeight: 600 }}>{formatCurrency(c._sum.paidAmount || 0)}</td>
-                    <td style={{ color: (c._sum.dueAmount || 0) > 0 ? "var(--danger)" : "var(--text-tertiary)", fontWeight: 600 }}>{formatCurrency(c._sum.dueAmount || 0)}</td>
-                    <td>{c._count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-      )}
-
-      {activeTab === "outstanding" && outstanding && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
-            {[
-              { label: "Total Outstanding", value: formatCurrency(outstanding.total), color: "#ef4444" },
-              { label: "Outstanding Invoices", value: outstanding.count, color: "#f59e0b" },
-              { label: "Avg Outstanding", value: outstanding.count ? formatCurrency(outstanding.total / outstanding.count) : "₹0", color: "#6366f1" },
-            ].map((s) => (
-              <div key={s.label} className="stat-card">
-                <p className="stat-label">{s.label}</p>
-                <p className="stat-value" style={{ color: s.color, marginTop: "0.5rem" }}>{s.value}</p>
+            <div className="card">
+              <div className="card-header"><span style={{ fontWeight: 600 }}>Sales by Product</span></div>
+              <div className="card-body">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie data={productSales.slice(0, 5).map((p: { productName: string; _sum: { totalAmount: number } }) => ({ name: p.productName, value: p._sum.totalAmount || 0 }))}
+                      cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${(name || "").slice(0, 12)} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
+                      {productSales.slice(0, 5).map((_: unknown, index: number) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
+            </div>
+          </motion.div>
+        ) : null
+      )}
+
+      {/* Customers Tab */}
+      {activeTab === "customers" && (
+        isLoadingCustomers ? (
+          <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div className="skeleton" style={{ width: "180px", height: "1.25rem" }} />
+            {Array(8).fill(null).map((_, i) => (
+              <div key={i} className="skeleton" style={{ width: "100%", height: "2.5rem" }} />
             ))}
           </div>
-          <div className="card">
-            <div className="card-header"><span style={{ fontWeight: 600 }}>Outstanding Invoices</span></div>
+        ) : customerSales ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
+            <div className="card-header"><span style={{ fontWeight: 600 }}>Customer-wise Sales</span></div>
             <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
               <table className="table">
                 <thead>
-                  <tr><th>Invoice #</th><th>Customer</th><th>City</th><th>Total</th><th>Due</th><th>Status</th></tr>
+                  <tr>
+                    <th>#</th>
+                    <th>Shop Name</th>
+                    <th>City</th>
+                    <th>Total Purchases</th>
+                    <th>Paid</th>
+                    <th>Outstanding</th>
+                    <th>Invoices</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {outstanding.invoices?.map((inv: { id: string; invoiceNumber: string; customer: { shopName: string; whatsapp: string; city: string }; totalAmount: number; dueAmount: number; paymentStatus: string }) => (
-                    <tr key={inv.id}>
-                      <td><a href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{inv.invoiceNumber}</a></td>
-                      <td style={{ fontWeight: 500 }}>{inv.customer.shopName}</td>
-                      <td style={{ color: "var(--text-secondary)" }}>{inv.customer.city}</td>
-                      <td>{formatCurrency(inv.totalAmount)}</td>
-                      <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(inv.dueAmount)}</td>
-                      <td><span className="badge badge-warning">{inv.paymentStatus}</span></td>
+                  {customerSales.map((c: { customerId: string; shopName: string; city: string; _sum: { totalAmount: number; paidAmount: number; dueAmount: number }; _count: number }, i: number) => (
+                    <tr key={c.customerId}>
+                      <td style={{ color: "var(--text-tertiary)" }}>{i + 1}</td>
+                      <td style={{ fontWeight: 600 }}>{c.shopName}</td>
+                      <td style={{ color: "var(--text-secondary)" }}>{c.city}</td>
+                      <td style={{ fontWeight: 700 }}>{formatCurrency(c._sum.totalAmount || 0)}</td>
+                      <td style={{ color: "var(--success)", fontWeight: 600 }}>{formatCurrency(c._sum.paidAmount || 0)}</td>
+                      <td style={{ color: (c._sum.dueAmount || 0) > 0 ? "var(--danger)" : "var(--text-tertiary)", fontWeight: 600 }}>{formatCurrency(c._sum.dueAmount || 0)}</td>
+                      <td>{c._count}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        ) : null
       )}
 
-      {activeTab === "profit" && profit && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
-            <div className="card card-body">
-              <h3 style={{ fontWeight: 700, marginBottom: "1rem" }}>P&L Summary</h3>
-              {[
-                { label: "Total Revenue", value: profit.revenue, color: "#3b82f6" },
-                { label: "Cost of Goods Sold", value: profit.costOfGoods, color: "#f59e0b" },
-                { label: "Gross Profit", value: profit.grossProfit, color: "#10b981" },
-              ].map((row) => (
-                <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 0", borderBottom: "1px solid var(--border-color)" }}>
-                  <span style={{ color: "var(--text-secondary)" }}>{row.label}</span>
-                  <span style={{ fontWeight: 700, color: row.color }}>{formatCurrency(row.value)}</span>
+      {/* Outstanding Tab */}
+      {activeTab === "outstanding" && (
+        isLoadingOutstanding ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  <div className="skeleton" style={{ width: "100px", height: "0.75rem" }} />
+                  <div className="skeleton" style={{ width: "140px", height: "1.5rem", marginTop: "0.25rem" }} />
                 </div>
               ))}
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 0", marginTop: "0.25rem" }}>
-                <span style={{ fontWeight: 700 }}>Profit Margin</span>
-                <span style={{ fontWeight: 800, color: "#10b981", fontSize: "1.125rem" }}>{profit.profitMargin}%</span>
-              </div>
             </div>
-            <div className="card card-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={[{ name: "Gross Profit", value: profit.grossProfit }, { name: "Cost", value: profit.costOfGoods }]}
-                    cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
-                    <Cell fill="#10b981" />
-                    <Cell fill="#f59e0b" />
-                  </Pie>
-                  <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "160px", height: "1rem" }} />
+              {Array(6).fill(null).map((_, i) => (
+                <div key={i} className="skeleton" style={{ width: "100%", height: "2.25rem" }} />
+              ))}
             </div>
           </div>
-        </motion.div>
+        ) : outstanding ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+              {[
+                { label: "Total Outstanding", value: formatCurrency(outstanding.total), color: "#ef4444" },
+                { label: "Outstanding Invoices", value: outstanding.count, color: "#f59e0b" },
+                { label: "Avg Outstanding", value: outstanding.count ? formatCurrency(outstanding.total / outstanding.count) : "₹0", color: "#6366f1" },
+              ].map((s) => (
+                <div key={s.label} className="stat-card">
+                  <p className="stat-label">{s.label}</p>
+                  <p className="stat-value" style={{ color: s.color, marginTop: "0.5rem" }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="card">
+              <div className="card-header"><span style={{ fontWeight: 600 }}>Outstanding Invoices</span></div>
+              <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
+                <table className="table">
+                  <thead>
+                    <tr><th>Invoice #</th><th>Customer</th><th>City</th><th>Total</th><th>Due</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {outstanding.invoices?.map((inv: { id: string; invoiceNumber: string; customer: { shopName: string; whatsapp: string; city: string }; totalAmount: number; dueAmount: number; paymentStatus: string }) => (
+                      <tr key={inv.id}>
+                        <td><a href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{inv.invoiceNumber}</a></td>
+                        <td style={{ fontWeight: 500 }}>{inv.customer.shopName}</td>
+                        <td style={{ color: "var(--text-secondary)" }}>{inv.customer.city}</td>
+                        <td>{formatCurrency(inv.totalAmount)}</td>
+                        <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(inv.dueAmount)}</td>
+                        <td><span className="badge badge-warning">{inv.paymentStatus}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        ) : null
       )}
 
+      {/* Profit Tab */}
+      {activeTab === "profit" && (
+        isLoadingProfit ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "120px", height: "1.25rem" }} />
+              {Array(4).fill(null).map((_, i) => (
+                <div key={i} className="skeleton" style={{ width: "100%", height: "2.5rem" }} />
+              ))}
+            </div>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "120px", height: "1.25rem" }} />
+              <div className="skeleton" style={{ width: "100%", height: "220px" }} />
+            </div>
+          </div>
+        ) : profit ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+              <div className="card card-body">
+                <h3 style={{ fontWeight: 700, marginBottom: "1rem" }}>P&L Summary</h3>
+                {[
+                  { label: "Total Revenue", value: profit.revenue, color: "#3b82f6" },
+                  { label: "Cost of Goods Sold", value: profit.costOfGoods, color: "#f59e0b" },
+                  { label: "Gross Profit", value: profit.grossProfit, color: "#10b981" },
+                ].map((row) => (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 0", borderBottom: "1px solid var(--border-color)" }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{row.label}</span>
+                    <span style={{ fontWeight: 700, color: row.color }}>{formatCurrency(row.value)}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0.75rem 0", marginTop: "0.25rem" }}>
+                  <span style={{ fontWeight: 700 }}>Profit Margin</span>
+                  <span style={{ fontWeight: 800, color: "#10b981", fontSize: "1.125rem" }}>{profit.profitMargin}%</span>
+                </div>
+              </div>
+              <div className="card card-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={[{ name: "Gross Profit", value: profit.grossProfit }, { name: "Cost", value: profit.costOfGoods }]}
+                      cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
+                      <Cell fill="#10b981" />
+                      <Cell fill="#f59e0b" />
+                    </Pie>
+                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </motion.div>
+        ) : null
+      )}
+
+      {/* GST Tab */}
       {activeTab === "gst" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
           <div className="card-header">
