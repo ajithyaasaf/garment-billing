@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface ProductForm {
   name: string;
@@ -44,6 +45,7 @@ export default function EditProductPage() {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
     watch,
   } = useForm<ProductForm>({
@@ -191,15 +193,26 @@ export default function EditProductPage() {
 
                 <div className="form-group">
                   <label className="form-label">Category *</label>
-                  <select
-                    className={`form-input form-select ${errors.categoryId ? "error" : ""}`}
-                    {...register("categoryId", { required: "Category is required" })}
-                  >
-                    <option value="">Select category</option>
-                    {categories?.map((cat: { id: string; name: string }) => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="categoryId"
+                    rules={{ required: "Category is required" }}
+                    render={({ field }) => (
+                      <SearchableSelect
+                        options={
+                          categories?.map((cat: { id: string; name: string }) => ({
+                            value: cat.id,
+                            label: cat.name,
+                          })) || []
+                        }
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select category..."
+                        searchPlaceholder="Search category..."
+                        error={!!errors.categoryId}
+                      />
+                    )}
+                  />
                   {errors.categoryId && <span className="form-error">{errors.categoryId.message}</span>}
                 </div>
 

@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { motion } from "framer-motion";
 import { Plus, Trash2, ArrowLeft, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface OrderForm {
   customerId: string;
@@ -149,15 +150,27 @@ export default function NewOrderPage() {
               <div className="card-body">
                 <div className="form-group">
                   <label className="form-label">Select Customer *</label>
-                  <select
-                    className={`form-input form-select ${errors.customerId ? "error" : ""}`}
-                    {...register("customerId", { required: "Customer is required" })}
-                  >
-                    <option value="">Select customer...</option>
-                    {customers?.data?.map((c: { id: string; shopName: string; ownerName: string }) => (
-                      <option key={c.id} value={c.id}>{c.shopName} – {c.ownerName}</option>
-                    ))}
-                  </select>
+                  <Controller
+                    control={control}
+                    name="customerId"
+                    rules={{ required: "Customer is required" }}
+                    render={({ field }) => (
+                      <SearchableSelect
+                        options={
+                          customers?.data?.map((c: { id: string; shopName: string; ownerName: string }) => ({
+                            value: c.id,
+                            label: c.shopName,
+                            sublabel: c.ownerName,
+                          })) || []
+                        }
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Select customer..."
+                        searchPlaceholder="Search customer by shop or owner name..."
+                        error={!!errors.customerId}
+                      />
+                    )}
+                  />
                   {errors.customerId && <span className="form-error">{errors.customerId.message}</span>}
                 </div>
               </div>

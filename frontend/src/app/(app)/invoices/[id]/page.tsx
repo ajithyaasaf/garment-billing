@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark } from "lucide-react";
+import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge } from "@/lib/utils";
@@ -70,6 +71,11 @@ export default function InvoiceDetailPage() {
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["invoice", id],
     queryFn: async () => (await api.get(`/invoices/${id}`)).data,
+  });
+
+  const { data: business } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: async () => (await api.get("/settings/business")).data,
   });
 
   const recordPaymentMutation = useMutation({
@@ -157,10 +163,20 @@ export default function InvoiceDetailPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600 }}>From</span>
-                  <div style={{ fontWeight: 700, fontSize: "1rem", marginTop: "0.25rem" }}>GarmentOS Wholesale</div>
+                  <div style={{ fontWeight: 700, fontSize: "1rem", marginTop: "0.25rem" }}>{business?.name || "GarmentOS Wholesale"}</div>
                   <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    Tiruppur, Tamil Nadu<br />
-                    GST: 33ABCDE1234F1Z5
+                    {business?.address ? (
+                      <>
+                        {business.address}<br />
+                        {business.city && `${business.city}, `}{business.state || "Tamil Nadu"} {business.pincode && `- ${business.pincode}`}
+                      </>
+                    ) : (
+                      "Tiruppur, Tamil Nadu"
+                    )}
+                    {(business?.gstNumber || business?.phone) && <br />}
+                    {business?.gstNumber && <><strong>GST:</strong> {business.gstNumber}</>}
+                    {business?.gstNumber && business?.phone && <> · </>}
+                    {business?.phone && <><strong>Ph:</strong> {business.phone}</>}
                   </div>
                 </div>
                 <div>
@@ -301,13 +317,20 @@ export default function InvoiceDetailPage() {
       </div>
 
       {/* Record Payment Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "1rem" }}>
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="card" style={{ maxWidth: "450px", width: "100%", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-xl)" }}>
-              <div className="card-header"><span style={{ fontWeight: 700 }}>Record Payment</span></div>
+      <Dialog.Root open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="modal-overlay">
+            <Dialog.Content className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "460px" }}>
+              <div className="modal-header">
+                <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Record Payment</h2>
+                <Dialog.Close asChild>
+                  <button className="btn btn-ghost btn-sm btn-icon" style={{ borderRadius: "50%", padding: "0.25rem" }}>
+                    <X size={16} />
+                  </button>
+                </Dialog.Close>
+              </div>
               <form onSubmit={(e) => { e.preventDefault(); recordPaymentMutation.mutate(); }}>
-                <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1.125rem", padding: "1.5rem" }}>
                   <div className="form-group">
                     <label className="form-label">Payment Amount (₹) *</label>
                     <input type="number" min="0.01" step="0.01" max={invoice.dueAmount} className="form-input" required value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
@@ -336,18 +359,20 @@ export default function InvoiceDetailPage() {
                     <textarea className="form-input" placeholder="Payment notes..." rows={2} value={payNotes} onChange={(e) => setPayNotes(e.target.value)} style={{ resize: "none" }} />
                   </div>
                 </div>
-                <div className="card-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowPaymentModal(false)}>Cancel</button>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem", padding: "1rem 1.5rem", borderTop: "1px solid var(--border-color)", background: "var(--bg-tertiary)", borderBottomLeftRadius: "var(--radius-xl)", borderBottomRightRadius: "var(--radius-xl)" }}>
+                  <Dialog.Close asChild>
+                    <button type="button" className="btn btn-secondary">Cancel</button>
+                  </Dialog.Close>
                   <button type="submit" className="btn btn-primary" disabled={recordPaymentMutation.isPending || !payAmount}>
                     {recordPaymentMutation.isPending && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
                     Record Payment
                   </button>
                 </div>
               </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </Dialog.Content>
+          </Dialog.Overlay>
+        </Dialog.Portal>
+      </Dialog.Root>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @media print {

@@ -20,6 +20,11 @@ export default function QuotationDetailPage() {
     queryFn: async () => (await api.get(`/quotations/${id}`)).data,
   });
 
+  const { data: business } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: async () => (await api.get("/settings/business")).data,
+  });
+
   const convertMutation = useMutation({
     mutationFn: async () => (await api.post(`/quotations/${id}/convert`)).data,
     onSuccess: (invoice) => {
@@ -110,8 +115,23 @@ export default function QuotationDetailPage() {
         {/* Print Header */}
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2rem", borderBottom: "1px solid var(--border-color)", paddingBottom: "1.5rem" }}>
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--brand-600)" }}>GARMENTOS ERP</h2>
-            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>Tiruppur, Tamil Nadu, India</p>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--brand-600)", textTransform: "uppercase" }}>
+              {business?.name || "GARMENTOS ERP"}
+            </h2>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+              {business?.address ? (
+                <>
+                  {business.address}, {business.city && `${business.city}, `}{business.state || "Tamil Nadu"} {business.pincode && `- ${business.pincode}`}
+                </>
+              ) : (
+                "Tiruppur, Tamil Nadu, India"
+              )}
+              {business?.gstNumber && (
+                <div style={{ marginTop: "0.125rem" }}>
+                  <strong>GSTIN:</strong> {business.gstNumber}
+                </div>
+              )}
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>QUOTATION</h2>

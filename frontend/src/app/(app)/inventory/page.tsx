@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 interface Product {
   id: string;
@@ -164,17 +165,23 @@ export default function InventoryPage() {
         </select>
 
         {categories?.length > 0 && (
-          <select
-            className="form-input form-select"
-            style={{ width: "auto", minWidth: "140px" }}
+          <SearchableSelect
+            options={[
+              { value: "", label: "All Categories" },
+              ...categories.map((cat: { id: string; name: string }) => ({
+                value: cat.id,
+                label: cat.name,
+              })),
+            ]}
             value={categoryFilter}
-            onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat: { id: string; name: string }) => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+            onChange={(val) => {
+              setCategoryFilter(val);
+              setPage(1);
+            }}
+            placeholder="All Categories"
+            searchPlaceholder="Search category..."
+            className="w-auto min-w-[160px]"
+          />
         )}
 
         <button
