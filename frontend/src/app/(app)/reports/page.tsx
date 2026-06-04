@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
@@ -132,11 +133,12 @@ export default function ReportsPage() {
 
   const handleExport = () => {
     let headers: string[] = [];
-    let rows: string[][] = [];
-    let filename = `report_${activeTab}.csv`;
+    let rows: any[][] = [];
+    let filename = `report_${activeTab}.xlsx`;
+    let colWidths: { wch: number }[] = [];
 
     if (activeTab === "gst" && gstData) {
-      filename = `GSTR1_Report_${selectedMonth}_${selectedYear}.csv`;
+      filename = `GSTR1_Report_${selectedMonth}_${selectedYear}.xlsx`;
       headers = [
         "Invoice Number",
         "Invoice Date",
@@ -149,6 +151,18 @@ export default function ReportsPage() {
         "IGST (INR)",
         "Total Invoice Value (INR)"
       ];
+      colWidths = [
+        { wch: 18 }, // Invoice Number
+        { wch: 15 }, // Invoice Date
+        { wch: 25 }, // Customer Name
+        { wch: 18 }, // GSTIN
+        { wch: 22 }, // Place of Supply (State)
+        { wch: 18 }, // Taxable Value (INR)
+        { wch: 12 }, // CGST (INR)
+        { wch: 12 }, // SGST (INR)
+        { wch: 12 }, // IGST (INR)
+        { wch: 22 }  // Total Invoice Value (INR)
+      ];
       rows = (gstData.invoices || []).map((inv: any) => {
         const d = new Date(inv.invoiceDate);
         const formattedDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
@@ -158,79 +172,76 @@ export default function ReportsPage() {
           inv.customer,
           inv.gstNumber || "URP",
           inv.state || "Tamil Nadu",
-          inv.taxableAmount.toFixed(2),
-          inv.cgst.toFixed(2),
-          inv.sgst.toFixed(2),
-          inv.igst.toFixed(2),
-          inv.totalAmount.toFixed(2)
+          Number(inv.taxableAmount.toFixed(2)),
+          Number(inv.cgst.toFixed(2)),
+          Number(inv.sgst.toFixed(2)),
+          Number(inv.igst.toFixed(2)),
+          Number(inv.totalAmount.toFixed(2))
         ];
       });
     } else if (activeTab === "products" && productSales) {
-      filename = `Product_Sales_Report.csv`;
+      filename = `Product_Sales_Report.xlsx`;
       headers = ["Product Name", "Quantity Sold", "Total Sales Value (INR)"];
+      colWidths = [{ wch: 30 }, { wch: 15 }, { wch: 22 }];
       rows = productSales.map((item: any) => [
         item.productName,
-        item._sum.quantity.toString(),
-        item._sum.totalAmount.toString()
+        Number(item._sum.quantity),
+        Number(item._sum.totalAmount.toFixed(2))
       ]);
     } else if (activeTab === "customers" && customerSales) {
-      filename = `Customer_Sales_Report.csv`;
+      filename = `Customer_Sales_Report.xlsx`;
       headers = ["Customer Shop Name", "City", "Total Sales Value (INR)", "Total Paid (INR)", "Total Due (INR)", "Invoice Count"];
+      colWidths = [{ wch: 25 }, { wch: 15 }, { wch: 22 }, { wch: 18 }, { wch: 18 }, { wch: 15 }];
       rows = customerSales.map((item: any) => [
         item.shopName || "Unknown",
         item.city || "Unknown",
-        item._sum.totalAmount.toString(),
-        item._sum.paidAmount.toString(),
-        item._sum.dueAmount.toString(),
-        item._count.toString()
+        Number(item._sum.totalAmount.toFixed(2)),
+        Number(item._sum.paidAmount.toFixed(2)),
+        Number(item._sum.dueAmount.toFixed(2)),
+        Number(item._count)
       ]);
     } else if (activeTab === "outstanding" && outstanding) {
-      filename = `Outstanding_Invoices_Report.csv`;
+      filename = `Outstanding_Invoices_Report.xlsx`;
       headers = ["Invoice Number", "Customer Name", "City", "Total Amount (INR)", "Due Amount (INR)", "Payment Status"];
+      colWidths = [{ wch: 18 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
       rows = (outstanding.invoices || []).map((inv: any) => [
         inv.invoiceNumber,
         inv.customer.shopName,
         inv.customer.city,
-        inv.totalAmount.toString(),
-        inv.dueAmount.toString(),
+        Number(inv.totalAmount.toFixed(2)),
+        Number(inv.dueAmount.toFixed(2)),
         inv.paymentStatus
       ]);
     } else if (activeTab === "profit" && profit) {
-      filename = `Profit_Loss_Report.csv`;
+      filename = `Profit_Loss_Report.xlsx`;
       headers = ["Metric", "Amount (INR)"];
+      colWidths = [{ wch: 25 }, { wch: 20 }];
       rows = [
-        ["Total Revenue", profit.revenue.toString()],
-        ["Cost of Goods Sold", profit.costOfGoods.toString()],
-        ["Gross Profit", profit.grossProfit.toString()],
+        ["Total Revenue", Number(profit.revenue.toFixed(2))],
+        ["Cost of Goods Sold", Number(profit.costOfGoods.toFixed(2))],
+        ["Gross Profit", Number(profit.grossProfit.toFixed(2))],
         ["Profit Margin (%)", `${profit.profitMargin}%`]
       ];
     } else if (activeTab === "overview" && dailySales) {
-      filename = `Daily_Sales_Trend.csv`;
+      filename = `Daily_Sales_Trend.xlsx`;
       headers = ["Date", "Revenue (INR)", "Collected (INR)", "Invoice Count"];
+      colWidths = [{ wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
       rows = dailySales.map((item: any) => [
         item.date,
-        item.revenue.toString(),
-        item.collected.toString(),
-        item.count.toString()
+        Number(item.revenue.toFixed(2)),
+        Number(item.collected.toFixed(2)),
+        Number(item.count)
       ]);
     } else {
       return;
     }
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    worksheet["!cols"] = colWidths;
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report Data");
+    XLSX.writeFile(workbook, filename);
   };
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
