@@ -330,6 +330,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <LogOut size={16} />
             </button>
           </div>
+          <div style={{ textAlign: "center", marginTop: "0.75rem", paddingBottom: "0.25rem" }}>
+            <span style={{ fontSize: "0.6875rem", fontWeight: 800, color: "var(--brand-600)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Designed & Developed by AJITH
+            </span>
+          </div>
         </div>
       </aside>
 

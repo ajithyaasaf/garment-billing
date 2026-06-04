@@ -334,9 +334,14 @@ export default function LoginPage() {
             </div>
           </motion.div>
 
-          <p style={{ textAlign: "center", color: "#475569", fontSize: "0.75rem", marginTop: "1.5rem" }}>
-            © 2024 GarmentOS · Tiruppur Wholesale ERP
-          </p>
+          <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
+            <p style={{ color: "#475569", fontSize: "0.75rem" }}>
+              © 2024 GarmentOS · Tiruppur Wholesale ERP
+            </p>
+            <p style={{ color: "#94a3b8", fontSize: "0.875rem", fontWeight: 700, marginTop: "0.5rem", letterSpacing: "0.025em" }}>
+              Designed and developed by <span style={{ color: "white" }}>AJITH</span>
+            </p>
+          </div>
         </motion.div>
       </div>
 
