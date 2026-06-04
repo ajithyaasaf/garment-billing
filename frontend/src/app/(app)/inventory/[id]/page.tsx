@@ -132,9 +132,9 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1.2fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="inventory-detail-layout" style={{ display: "grid", gap: "1.25rem", alignItems: "start" }}>
         {/* Left Column - Variants & Stock Adjustment */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0 }}>
           {/* Variants Table */}
           <div className="card">
             <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -315,6 +315,16 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+      <style>{`
+        .inventory-detail-layout {
+          grid-template-columns: 2fr 1.2fr;
+        }
+        @media (max-width: 768px) {
+          .inventory-detail-layout {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

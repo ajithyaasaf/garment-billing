@@ -122,10 +122,10 @@ export default function StockOperationsPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="stock-operations-layout" style={{ display: "grid", gap: "1.25rem", alignItems: "start" }}>
 
         {/* Left Column - Action Form */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0 }}>
 
           <div className="card">
             <div className="card-header">
@@ -357,6 +357,16 @@ export default function StockOperationsPage() {
         </div>
 
       </div>
+      <style>{`
+        .stock-operations-layout {
+          grid-template-columns: 1fr 1.3fr;
+        }
+        @media (max-width: 768px) {
+          .stock-operations-layout {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

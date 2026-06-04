@@ -111,8 +111,8 @@ export default function NewQuotationPage() {
       </div>
 
       <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="new-transaction-layout" style={{ display: "grid", gap: "1.25rem", alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0 }}>
             <div className="card">
               <div className="card-header"><span style={{ fontWeight: 600 }}>Customer</span></div>
               <div className="card-body">
@@ -280,7 +280,17 @@ export default function NewQuotationPage() {
           </div>
         </div>
       </form>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .new-transaction-layout {
+          grid-template-columns: 2fr 1fr;
+        }
+        @media (max-width: 768px) {
+          .new-transaction-layout {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }
