@@ -124,7 +124,7 @@ export default function QuotationDetailPage() {
                   {business.address}, {business.city && `${business.city}, `}{business.state || "Tamil Nadu"} {business.pincode && `- ${business.pincode}`}
                 </>
               ) : (
-                "Tiruppur, Tamil Nadu, India"
+                "Madurai, Tamil Nadu, India"
               )}
               {business?.gstNumber && (
                 <div style={{ marginTop: "0.125rem" }}>

@@ -171,7 +171,7 @@ export default function InvoiceDetailPage() {
                         {business.city && `${business.city}, `}{business.state || "Tamil Nadu"} {business.pincode && `- ${business.pincode}`}
                       </>
                     ) : (
-                      "Tiruppur, Tamil Nadu"
+                      "Madurai, Tamil Nadu"
                     )}
                     {(business?.gstNumber || business?.phone) && <br />}
                     {business?.gstNumber && <><strong>GST:</strong> {business.gstNumber}</>}

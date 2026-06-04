@@ -63,7 +63,9 @@ export default function LoginPage() {
       style={{
         minHeight: "100vh",
         display: "flex",
-        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+        backgroundColor: "#020617",
+        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
         position: "relative",
         overflow: "hidden",
       }}
@@ -142,7 +144,7 @@ export default function LoginPage() {
               GarmentOS
             </h1>
             <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-              Wholesale ERP · Tiruppur
+              Wholesale ERP · Madurai
             </p>
           </div>
 
@@ -336,7 +338,7 @@ export default function LoginPage() {
 
           <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
             <p style={{ color: "#475569", fontSize: "0.75rem" }}>
-              © 2024 GarmentOS · Tiruppur Wholesale ERP
+              © 2024 GarmentOS · Madurai Wholesale ERP
             </p>
             <p style={{ color: "#94a3b8", fontSize: "0.875rem", fontWeight: 700, marginTop: "0.5rem", letterSpacing: "0.025em" }}>
               Designed and developed by <span style={{ color: "white" }}>AJITH</span>
