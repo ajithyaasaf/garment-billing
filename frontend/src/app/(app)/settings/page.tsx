@@ -72,7 +72,6 @@ export default function SettingsPage() {
               alignItems: "center",
               gap: "0.375rem",
               padding: "0.625rem 1rem",
-              borderBottom: activeTab === tab.key ? "2px solid var(--brand-600)" : "2px solid transparent",
               background: "none",
               border: "none",
               borderBottom: activeTab === tab.key ? "2px solid var(--brand-600)" : "2px solid transparent",
@@ -114,7 +113,7 @@ export default function SettingsPage() {
                 ].map((field) => (
                   <div key={field.key} className="form-group">
                     <label className="form-label">{field.label}</label>
-                    <input className="form-input" {...businessForm.register(field.key as keyof typeof business)} defaultValue={business[field.key as keyof typeof business] as string} />
+                    <input className="form-input" {...businessForm.register(field.key as any)} defaultValue={business[field.key as keyof typeof business] as string} />
                   </div>
                 ))}
               </div>
@@ -131,7 +130,7 @@ export default function SettingsPage() {
                 ].map((field) => (
                   <div key={field.key} className="form-group">
                     <label className="form-label">{field.label}</label>
-                    <input className="form-input" {...businessForm.register(field.key as keyof typeof business)} defaultValue={business[field.key as keyof typeof business] as string} />
+                    <input className="form-input" {...businessForm.register(field.key as any)} defaultValue={business[field.key as keyof typeof business] as string} />
                   </div>
                 ))}
               </div>
@@ -146,7 +145,7 @@ export default function SettingsPage() {
                 ].map((field) => (
                   <div key={field.key} className="form-group">
                     <label className="form-label">{field.label}</label>
-                    <input className="form-input" {...businessForm.register(field.key as keyof typeof business)} defaultValue={business[field.key as keyof typeof business] as string} />
+                    <input className="form-input" {...businessForm.register(field.key as any)} defaultValue={business[field.key as keyof typeof business] as string} />
                   </div>
                 ))}
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>

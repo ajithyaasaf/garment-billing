@@ -129,7 +129,7 @@ export default function ReportsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--text-secondary)" }} />
                     <YAxis tick={{ fontSize: 12, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} labelStyle={{ color: "var(--text-primary)" }} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} labelStyle={{ color: "var(--text-primary)" }} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
                     <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f615" strokeWidth={2} name="Revenue" />
                     <Area type="monotone" dataKey="collected" stroke="#10b981" fill="#10b98115" strokeWidth={2} name="Collected" />
                   </AreaChart>
@@ -150,7 +150,7 @@ export default function ReportsPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                     <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} tickFormatter={(v) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                    <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
                     <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Revenue" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -185,10 +185,10 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie data={productSales.slice(0, 5).map((p: { productName: string; _sum: { totalAmount: number } }) => ({ name: p.productName, value: p._sum.totalAmount || 0 }))}
-                    cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${name.slice(0, 12)} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                    cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, percent }) => `${(name || "").slice(0, 12)} ${((percent || 0) * 100).toFixed(0)}%`} labelLine={false}>
                     {productSales.slice(0, 5).map((_: unknown, index: number) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                  <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -293,11 +293,11 @@ export default function ReportsPage() {
               <ResponsiveContainer width="100%" height={220}>
                 <PieChart>
                   <Pie data={[{ name: "Gross Profit", value: profit.grossProfit }, { name: "Cost", value: profit.costOfGoods }]}
-                    cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
                     <Cell fill="#10b981" />
                     <Cell fill="#f59e0b" />
                   </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
+                  <Tooltip formatter={(v: any) => formatCurrency(Number(v) || 0)} contentStyle={{ background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.5rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

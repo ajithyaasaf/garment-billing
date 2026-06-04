@@ -65,7 +65,7 @@ export function getQuotationStatusBadge(status: string): string {
   return map[status] || "badge-gray";
 }
 
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
   fn: T,
   delay: number
 ): (...args: Parameters<T>) => void {
