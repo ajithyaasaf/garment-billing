@@ -1,0 +1,186 @@
+import { Router, Response } from 'express';
+import { prisma } from '../lib/prisma';
+import { authenticate, AuthRequest } from '../middleware/auth';
+
+const router = Router();
+router.use(authenticate);
+
+// GET /api/reports/sales-daily
+router.get('/sales-daily', async (req: AuthRequest, res: Response) => {
+  const { days = '30' } = req.query;
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - parseInt(days as string));
+
+  const invoices = await prisma.invoice.findMany({
+    where: { invoiceDate: { gte: daysAgo } },
+    select: { invoiceDate: true, totalAmount: true, paidAmount: true },
+    orderBy: { invoiceDate: 'asc' },
+  });
+
+  // Group by date
+  const grouped: Record<string, { date: string; revenue: number; collected: number; count: number }> = {};
+  for (const inv of invoices) {
+    const date = inv.invoiceDate.toISOString().split('T')[0];
+    if (!grouped[date]) grouped[date] = { date, revenue: 0, collected: 0, count: 0 };
+    grouped[date].revenue += inv.totalAmount;
+    grouped[date].collected += inv.paidAmount;
+    grouped[date].count++;
+  }
+
+  res.json(Object.values(grouped));
+});
+
+// GET /api/reports/sales-monthly
+router.get('/sales-monthly', async (req: AuthRequest, res: Response) => {
+  const { year = new Date().getFullYear() } = req.query;
+  const startDate = new Date(`${year}-01-01`);
+  const endDate = new Date(`${parseInt(year as string) + 1}-01-01`);
+
+  const invoices = await prisma.invoice.findMany({
+    where: { invoiceDate: { gte: startDate, lt: endDate } },
+    select: { invoiceDate: true, totalAmount: true, paidAmount: true },
+  });
+
+  const monthly: Record<number, { month: number; revenue: number; collected: number; count: number }> = {};
+  for (let i = 1; i <= 12; i++) {
+    monthly[i] = { month: i, revenue: 0, collected: 0, count: 0 };
+  }
+
+  for (const inv of invoices) {
+    const m = inv.invoiceDate.getMonth() + 1;
+    monthly[m].revenue += inv.totalAmount;
+    monthly[m].collected += inv.paidAmount;
+    monthly[m].count++;
+  }
+
+  res.json(Object.values(monthly));
+});
+
+// GET /api/reports/product-sales
+router.get('/product-sales', async (req: AuthRequest, res: Response) => {
+  const { limit = '20' } = req.query;
+
+  const productSales = await prisma.invoiceItem.groupBy({
+    by: ['productId', 'productName'],
+    _sum: { quantity: true, totalAmount: true },
+    orderBy: { _sum: { totalAmount: 'desc' } },
+    take: parseInt(limit as string),
+  });
+
+  res.json(productSales);
+});
+
+// GET /api/reports/customer-sales
+router.get('/customer-sales', async (req: AuthRequest, res: Response) => {
+  const customers = await prisma.invoice.groupBy({
+    by: ['customerId'],
+    _sum: { totalAmount: true, paidAmount: true, dueAmount: true },
+    _count: true,
+    orderBy: { _sum: { totalAmount: 'desc' } },
+    take: 20,
+  });
+
+  const customerIds = customers.map((c) => c.customerId);
+  const customerDetails = await prisma.customer.findMany({
+    where: { id: { in: customerIds } },
+    select: { id: true, shopName: true, city: true },
+  });
+
+  const result = customers.map((c) => {
+    const detail = customerDetails.find((d) => d.id === c.customerId);
+    return {
+      ...c,
+      shopName: detail?.shopName,
+      city: detail?.city,
+    };
+  });
+
+  res.json(result);
+});
+
+// GET /api/reports/gst
+router.get('/gst', async (req: AuthRequest, res: Response) => {
+  const { month, year } = req.query;
+  const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + 1);
+
+  const invoices = await prisma.invoice.findMany({
+    where: { invoiceDate: { gte: startDate, lt: endDate } },
+    include: {
+      customer: { select: { shopName: true, gstNumber: true } },
+      items: { select: { gstPercent: true, gstAmount: true, totalAmount: true, quantity: true } },
+    },
+  });
+
+  const gstSummary: Record<number, { rate: number; taxable: number; gst: number }> = {};
+
+  for (const inv of invoices) {
+    for (const item of inv.items) {
+      if (!gstSummary[item.gstPercent]) {
+        gstSummary[item.gstPercent] = { rate: item.gstPercent, taxable: 0, gst: 0 };
+      }
+      gstSummary[item.gstPercent].taxable += item.totalAmount - item.gstAmount;
+      gstSummary[item.gstPercent].gst += item.gstAmount;
+    }
+  }
+
+  res.json({
+    period: { month, year },
+    invoiceCount: invoices.length,
+    gstBreakdown: Object.values(gstSummary),
+    invoices: invoices.map((inv) => ({
+      invoiceNumber: inv.invoiceNumber,
+      customer: inv.customer.shopName,
+      gstNumber: inv.customer.gstNumber,
+      taxAmount: inv.taxAmount,
+      totalAmount: inv.totalAmount,
+    })),
+  });
+});
+
+// GET /api/reports/outstanding
+router.get('/outstanding', async (_req, res: Response) => {
+  const outstanding = await prisma.invoice.findMany({
+    where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
+    include: { customer: { select: { shopName: true, whatsapp: true, city: true } } },
+    orderBy: { dueAmount: 'desc' },
+  });
+
+  const total = outstanding.reduce((sum, inv) => sum + inv.dueAmount, 0);
+
+  res.json({ total, count: outstanding.length, invoices: outstanding });
+});
+
+// GET /api/reports/profit
+router.get('/profit', async (req: AuthRequest, res: Response) => {
+  const { fromDate, toDate } = req.query;
+
+  const where: Record<string, unknown> = {};
+  if (fromDate || toDate) {
+    where.invoiceDate = {
+      ...(fromDate ? { gte: new Date(fromDate as string) } : {}),
+      ...(toDate ? { lte: new Date(toDate as string) } : {}),
+    };
+  }
+
+  const invoiceItems = await prisma.invoiceItem.findMany({
+    where: { invoice: where },
+    include: { product: { select: { purchasePrice: true } } },
+  });
+
+  let revenue = 0;
+  let costOfGoods = 0;
+
+  for (const item of invoiceItems) {
+    revenue += item.totalAmount;
+    costOfGoods += (item.product.purchasePrice || 0) * item.quantity;
+  }
+
+  const grossProfit = revenue - costOfGoods;
+  const profitMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
+
+  res.json({ revenue, costOfGoods, grossProfit, profitMargin: profitMargin.toFixed(2) });
+});
+
+export default router;

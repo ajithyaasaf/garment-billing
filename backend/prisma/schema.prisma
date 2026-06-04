@@ -1,0 +1,425 @@
+// Wholesale Garment ERP - Prisma Schema
+// Tiruppur Bulk Dress Seller - Production Grade
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================
+// ENUMS
+// ============================
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum Gender {
+  MENS
+  WOMENS
+  KIDS
+  UNISEX
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  CREDIT
+}
+
+enum StockMovementType {
+  INWARD
+  OUTWARD
+  RETURN
+  DAMAGED
+  ADJUSTMENT
+}
+
+// ============================
+// USER / AUTH
+// ============================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         UserRole @default(STAFF)
+  phone        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quotations   Quotation[]
+  invoices     Invoice[]
+  orders       Order[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// ============================
+// BUSINESS SETTINGS
+// ============================
+
+model BusinessProfile {
+  id          String  @id @default(cuid())
+  name        String
+  address     String?
+  city        String?
+  state       String  @default("Tamil Nadu")
+  pincode     String?
+  phone       String?
+  email       String?
+  gstNumber   String?
+  logoUrl     String?
+  bankName    String?
+  bankAccount String?
+  bankIfsc    String?
+  upiId       String?
+  invoicePrefix String @default("INV")
+  quotationPrefix String @default("QUO")
+  invoiceNotes  String?
+  termsConditions String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("business_profile")
+}
+
+// ============================
+// CATEGORIES
+// ============================
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  @@map("categories")
+}
+
+// ============================
+// PRODUCTS / INVENTORY
+// ============================
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  sku             String   @unique
+  categoryId      String
+  brand           String?
+  gender          Gender   @default(UNISEX)
+  sleeveType      String?
+  gstPercent      Float    @default(5)
+  purchasePrice   Float    @default(0)
+  wholesalePrice  Float
+  retailPrice     Float?
+  isActive        Boolean  @default(true)
+  description     String?
+  imageUrl        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  category        Category          @relation(fields: [categoryId], references: [id])
+  variants        ProductVariant[]
+  stockMovements  StockMovement[]
+  quotationItems  QuotationItem[]
+  invoiceItems    InvoiceItem[]
+  orderItems      OrderItem[]
+
+  @@index([sku])
+  @@index([categoryId])
+  @@index([name])
+  @@map("products")
+}
+
+model ProductVariant {
+  id          String  @id @default(cuid())
+  productId   String
+  color       String
+  size        String
+  stock       Int     @default(0)
+  minStock    Int     @default(5)
+  purchasePrice Float?
+  wholesalePrice Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product         Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements  StockMovement[]
+  quotationItems  QuotationItem[]
+  invoiceItems    InvoiceItem[]
+  orderItems      OrderItem[]
+
+  @@unique([productId, color, size])
+  @@index([productId])
+  @@index([stock])
+  @@map("product_variants")
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  productId   String
+  variantId   String?
+  type        StockMovementType
+  quantity    Int
+  previousStock Int
+  newStock    Int
+  reason      String?
+  reference   String?
+  createdAt   DateTime          @default(now())
+  createdBy   String?
+
+  product     Product           @relation(fields: [productId], references: [id])
+  variant     ProductVariant?   @relation(fields: [variantId], references: [id])
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ============================
+// CUSTOMERS
+// ============================
+
+model Customer {
+  id           String   @id @default(cuid())
+  shopName     String
+  ownerName    String
+  whatsapp     String
+  email        String?
+  gstNumber    String?
+  address      String?
+  city         String?
+  state        String   @default("Tamil Nadu")
+  pincode      String?
+  creditLimit  Float    @default(0)
+  paymentTerms String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quotations   Quotation[]
+  invoices     Invoice[]
+  orders       Order[]
+
+  @@index([shopName])
+  @@index([whatsapp])
+  @@map("customers")
+}
+
+// ============================
+// QUOTATIONS
+// ============================
+
+model Quotation {
+  id              String        @id @default(cuid())
+  quotationNumber String        @unique
+  customerId      String
+  createdById     String
+  status          String        @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, CONVERTED
+  validUntil      DateTime?
+  subtotal        Float
+  discountAmount  Float         @default(0)
+  discountPercent Float         @default(0)
+  taxAmount       Float
+  totalAmount     Float
+  notes           String?
+  termsConditions String?
+  convertedToInvoice Boolean   @default(false)
+  invoiceId       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer    Customer        @relation(fields: [customerId], references: [id])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+  items       QuotationItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String  @id @default(cuid())
+  quotationId String
+  productId   String
+  variantId   String?
+  productName String
+  color       String?
+  size        String?
+  quantity    Int
+  unitPrice   Float
+  gstPercent  Float
+  gstAmount   Float
+  totalAmount Float
+  discount    Float   @default(0)
+
+  quotation   Quotation       @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+// ============================
+// INVOICES
+// ============================
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  customerId      String
+  createdById     String
+  orderId         String?
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod @default(CASH)
+  subtotal        Float
+  discountAmount  Float         @default(0)
+  discountPercent Float         @default(0)
+  taxAmount       Float
+  totalAmount     Float
+  paidAmount      Float         @default(0)
+  dueAmount       Float
+  dueDate         DateTime?
+  notes           String?
+  termsConditions String?
+  invoiceDate     DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer    Customer       @relation(fields: [customerId], references: [id])
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  items       InvoiceItem[]
+  payments    Payment[]
+
+  @@index([customerId])
+  @@index([paymentStatus])
+  @@index([invoiceDate])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  productId   String
+  variantId   String?
+  productName String
+  color       String?
+  size        String?
+  sku         String?
+  quantity    Int
+  unitPrice   Float
+  gstPercent  Float
+  gstAmount   Float
+  totalAmount Float
+  discount    Float   @default(0)
+
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  invoiceId   String
+  amount      Float
+  method      PaymentMethod
+  reference   String?
+  paidAt      DateTime      @default(now())
+  notes       String?
+
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ============================
+// ORDERS
+// ============================
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  customerId  String
+  createdById String
+  status      OrderStatus @default(PENDING)
+  notes       String?
+  totalAmount Float
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  items       OrderItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  variantId String?
+  productName String
+  quantity  Int
+  unitPrice Float
+  totalAmount Float
+
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id])
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+// ============================
+// NOTIFICATIONS
+// ============================
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // LOW_STOCK, PAYMENT_DUE, DAILY_SUMMARY
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
