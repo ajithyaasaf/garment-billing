@@ -7,9 +7,10 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, DollarSign, Users, Package, Download, BarChart3 } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Package, Download, BarChart3, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { toast } from "sonner";
 
 const COLORS = ["#3b82f6", "#6366f1", "#10b981", "#f59e0b", "#ef4444"];
 
@@ -87,7 +88,7 @@ export default function ReportsPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
-  const { data: gstData, isLoading: isLoadingGst, refetch: refetchGst } = useQuery({
+  const { data: gstData, isLoading: isLoadingGst, isFetching: isFetchingGst, refetch: refetchGst } = useQuery({
     queryKey: ["report-gst", selectedMonth, selectedYear],
     queryFn: async () => (await api.get(`/reports/gst?month=${selectedMonth}&year=${selectedYear}`)).data,
     enabled: activeTab === "gst",
@@ -668,9 +669,17 @@ export default function ReportsPage() {
               </div>
               <button
                 className="btn btn-primary"
-                style={{ marginTop: "1rem" }}
-                onClick={() => refetchGst()}
+                style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}
+                onClick={async () => {
+                  const { data } = await refetchGst();
+                  if (data) {
+                    const monthName = new Date(0, selectedMonth - 1).toLocaleString("default", { month: "long" });
+                    toast.success(`GST Report generated successfully for ${monthName} ${selectedYear}!`);
+                  }
+                }}
+                disabled={isFetchingGst}
               >
+                {isFetchingGst && <Loader2 size={14} className="animate-spin" />}
                 Generate GST Report
               </button>
             </div>
