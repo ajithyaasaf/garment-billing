@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Filter, RefreshCw, Edit, Trash2, Copy, Package, AlertTriangle } from "lucide-react";
+import { Plus, Search, Filter, RefreshCw, Edit, Trash2, Copy, Package, AlertTriangle, Eye } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
@@ -293,6 +293,9 @@ export default function InventoryPage() {
                     <td>{product.gstPercent}%</td>
                     <td>
                       <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.375rem" }}>
+                        <Link href={`/inventory/${product.id}`} className="btn btn-ghost btn-sm btn-icon" title="View Details">
+                          <Eye size={14} />
+                        </Link>
                         <Link href={`/inventory/${product.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit">
                           <Edit size={14} />
                         </Link>
