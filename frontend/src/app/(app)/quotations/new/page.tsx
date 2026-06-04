@@ -26,6 +26,7 @@ interface QuotationForm {
     unitPrice: number;
     gstPercent: number;
     discount: number;
+    variants?: { id: string; color: string; size: string }[];
   }[];
 }
 
@@ -55,7 +56,7 @@ export default function NewQuotationPage() {
     enabled: debouncedProductSearch.length > 1,
   });
 
-  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<QuotationForm>({
+  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<QuotationForm>({
     defaultValues: { customerId: preselectedCustomerId, discountAmount: 0, items: [] },
   });
 
@@ -94,7 +95,7 @@ export default function NewQuotationPage() {
     variants: { id: string; color: string; size: string }[];
   }) => {
     const variant = product.variants[0];
-    append({ productId: product.id, variantId: variant?.id || "", productName: product.name, color: variant?.color || "", size: variant?.size || "", quantity: 1, unitPrice: product.wholesalePrice, gstPercent: product.gstPercent, discount: 0 });
+    append({ productId: product.id, variantId: variant?.id || "", productName: product.name, color: variant?.color || "", size: variant?.size || "", quantity: 1, unitPrice: product.wholesalePrice, gstPercent: product.gstPercent, discount: 0, variants: product.variants });
     setProductSearch(""); setShowProductSearch(false);
   };
 
@@ -177,7 +178,34 @@ export default function NewQuotationPage() {
                           return (
                             <tr key={field.id}>
                               <td style={{ fontWeight: 500 }}>{field.productName}</td>
-                              <td><div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{field.color} / {field.size}</div></td>
+                              <td>
+                                {field.variants && field.variants.length > 0 ? (
+                                  <select
+                                    className="form-input form-select"
+                                    style={{ width: "120px", fontSize: "0.75rem", padding: "2px 6px", height: "auto" }}
+                                    {...register(`items.${index}.variantId`, {
+                                      required: true,
+                                      onChange: (e) => {
+                                        const selected = field.variants?.find((v) => v.id === e.target.value);
+                                        if (selected) {
+                                          setValue(`items.${index}.color`, selected.color);
+                                          setValue(`items.${index}.size`, selected.size);
+                                        }
+                                      }
+                                    })}
+                                  >
+                                    {field.variants.map((v) => (
+                                      <option key={v.id} value={v.id}>
+                                        {v.color} / {v.size}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                                    {field.color} / {field.size}
+                                  </div>
+                                )}
+                              </td>
                               <td><input type="number" min="1" className="form-input" style={{ width: "70px" }} {...register(`items.${index}.quantity`, { min: 1 })} /></td>
                               <td><input type="number" step="0.01" className="form-input" style={{ width: "90px" }} {...register(`items.${index}.unitPrice`)} /></td>
                               <td><select className="form-input form-select" style={{ width: "70px" }} {...register(`items.${index}.gstPercent`)}><option value={0}>0%</option><option value={5}>5%</option><option value={12}>12%</option><option value={18}>18%</option></select></td>

@@ -23,6 +23,7 @@ interface OrderForm {
     sku: string;
     quantity: number;
     unitPrice: number;
+    variants?: { id: string; color: string; size: string; stock: number }[];
   }[];
 }
 
@@ -58,6 +59,7 @@ export default function NewOrderPage() {
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<OrderForm>({
     defaultValues: {
@@ -116,6 +118,7 @@ export default function NewOrderPage() {
       sku: product.sku,
       quantity: 1,
       unitPrice: product.wholesalePrice,
+      variants: product.variants,
     });
     setProductSearch("");
     setShowProductSearch(false);
@@ -276,9 +279,32 @@ export default function NewOrderPage() {
                             <tr key={field.id}>
                               <td style={{ fontWeight: 500, minWidth: "150px" }}>{field.productName}</td>
                               <td>
-                                <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                                  {field.color} / {field.size}
-                                </div>
+                                {field.variants && field.variants.length > 0 ? (
+                                  <select
+                                    className="form-input form-select"
+                                    style={{ width: "120px", fontSize: "0.75rem", padding: "2px 6px", height: "auto" }}
+                                    {...register(`items.${index}.variantId`, {
+                                      required: true,
+                                      onChange: (e) => {
+                                        const selected = field.variants?.find((v) => v.id === e.target.value);
+                                        if (selected) {
+                                          setValue(`items.${index}.color`, selected.color);
+                                          setValue(`items.${index}.size`, selected.size);
+                                        }
+                                      }
+                                    })}
+                                  >
+                                    {field.variants.map((v) => (
+                                      <option key={v.id} value={v.id}>
+                                        {v.color} / {v.size} ({v.stock} left)
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                                    {field.color} / {field.size}
+                                  </div>
+                                )}
                               </td>
                               <td>
                                 <input

@@ -117,7 +117,7 @@ export default function InvoiceDetailPage() {
   return (
     <div style={{ maxWidth: "1000px" }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
+      <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <Link href="/invoices" className="btn btn-ghost btn-sm btn-icon">
             <ArrowLeft size={16} />
@@ -148,10 +148,10 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="print-layout" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
         {/* Main Details Panel */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card print-full">
             <div className="card-body">
               {/* Billing Info Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
@@ -237,7 +237,7 @@ export default function InvoiceDetailPage() {
           </motion.div>
 
           {/* Payment History Ledger */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="card">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="card no-print">
             <div className="card-header" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Landmark size={16} color="var(--brand-500)" />
               <span style={{ fontWeight: 600 }}>Payment History Ledger</span>
@@ -276,7 +276,7 @@ export default function InvoiceDetailPage() {
         </div>
 
         {/* Calculation Panel */}
-        <div style={{ position: "sticky", top: "80px", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        <div className="no-print" style={{ position: "sticky", top: "80px", display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="card">
             <div className="card-header"><span style={{ fontWeight: 600 }}>Billing Summary</span></div>
             <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
@@ -348,7 +348,36 @@ export default function InvoiceDetailPage() {
           </div>
         )}
       </AnimatePresence>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-full {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          .print-layout {
+            display: block !important;
+          }
+          aside.sidebar, header {
+            display: none !important;
+          }
+          main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

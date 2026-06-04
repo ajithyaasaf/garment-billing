@@ -224,7 +224,7 @@ router.get('/profit', async (req: AuthRequest, res: Response) => {
   let costOfGoods = 0;
 
   for (const item of invoiceItems) {
-    revenue += item.totalAmount;
+    revenue += item.totalAmount - item.gstAmount;
     costOfGoods += (item.product.purchasePrice || 0) * item.quantity;
   }
 
