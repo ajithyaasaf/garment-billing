@@ -133,7 +133,11 @@ export default function InvoicesPage() {
                         <Link href={`/invoices/${inv.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
                           <Receipt size={14} />
                         </Link>
-                        <button className="btn btn-ghost btn-sm btn-icon" title="Download PDF">
+                        <button 
+                          className="btn btn-ghost btn-sm btn-icon" 
+                          title="Download/Print PDF"
+                          onClick={() => window.open(`/invoices/${inv.id}?print=true`, "_blank")}
+                        >
                           <Download size={14} />
                         </button>
                       </div>
