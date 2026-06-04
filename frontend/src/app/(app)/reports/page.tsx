@@ -81,6 +81,17 @@ function CustomPieTooltip({ active, payload }: any) {
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "gst" | "outstanding" | "profit">("overview");
+  
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+
+  const { data: gstData, isLoading: isLoadingGst, refetch: refetchGst } = useQuery({
+    queryKey: ["report-gst", selectedMonth, selectedYear],
+    queryFn: async () => (await api.get(`/reports/gst?month=${selectedMonth}&year=${selectedYear}`)).data,
+    enabled: activeTab === "gst",
+  });
 
   const { data: dailySales, isLoading: isLoadingDaily } = useQuery({
     queryKey: ["report-daily"],
@@ -118,6 +129,105 @@ export default function ReportsPage() {
     enabled: activeTab === "overview" || activeTab === "profit",
   });
 
+  const handleExport = () => {
+    let headers: string[] = [];
+    let rows: string[][] = [];
+    let filename = `report_${activeTab}.csv`;
+
+    if (activeTab === "gst" && gstData) {
+      filename = `GSTR1_Report_${selectedMonth}_${selectedYear}.csv`;
+      headers = [
+        "Invoice Number",
+        "Invoice Date",
+        "Customer Name",
+        "GSTIN",
+        "Place of Supply (State)",
+        "Taxable Value (INR)",
+        "CGST (INR)",
+        "SGST (INR)",
+        "IGST (INR)",
+        "Total Invoice Value (INR)"
+      ];
+      rows = (gstData.invoices || []).map((inv: any) => [
+        inv.invoiceNumber,
+        new Date(inv.invoiceDate).toLocaleDateString("en-IN"),
+        inv.customer,
+        inv.gstNumber || "URP",
+        inv.state || "Tamil Nadu",
+        inv.taxableAmount.toString(),
+        inv.cgst.toString(),
+        inv.sgst.toString(),
+        inv.igst.toString(),
+        inv.totalAmount.toString()
+      ]);
+    } else if (activeTab === "products" && productSales) {
+      filename = `Product_Sales_Report.csv`;
+      headers = ["Product Name", "Quantity Sold", "Total Sales Value (INR)"];
+      rows = productSales.map((item: any) => [
+        item.productName,
+        item._sum.quantity.toString(),
+        item._sum.totalAmount.toString()
+      ]);
+    } else if (activeTab === "customers" && customerSales) {
+      filename = `Customer_Sales_Report.csv`;
+      headers = ["Customer Shop Name", "City", "Total Sales Value (INR)", "Total Paid (INR)", "Total Due (INR)", "Invoice Count"];
+      rows = customerSales.map((item: any) => [
+        item.shopName || "Unknown",
+        item.city || "Unknown",
+        item._sum.totalAmount.toString(),
+        item._sum.paidAmount.toString(),
+        item._sum.dueAmount.toString(),
+        item._count.toString()
+      ]);
+    } else if (activeTab === "outstanding" && outstanding) {
+      filename = `Outstanding_Invoices_Report.csv`;
+      headers = ["Invoice Number", "Customer Name", "City", "Total Amount (INR)", "Due Amount (INR)", "Payment Status"];
+      rows = (outstanding.invoices || []).map((inv: any) => [
+        inv.invoiceNumber,
+        inv.customer.shopName,
+        inv.customer.city,
+        inv.totalAmount.toString(),
+        inv.dueAmount.toString(),
+        inv.paymentStatus
+      ]);
+    } else if (activeTab === "profit" && profit) {
+      filename = `Profit_Loss_Report.csv`;
+      headers = ["Metric", "Amount (INR)"];
+      rows = [
+        ["Total Revenue", profit.revenue.toString()],
+        ["Cost of Goods Sold", profit.costOfGoods.toString()],
+        ["Gross Profit", profit.grossProfit.toString()],
+        ["Profit Margin (%)", `${profit.profitMargin}%`]
+      ];
+    } else if (activeTab === "overview" && dailySales) {
+      filename = `Daily_Sales_Trend.csv`;
+      headers = ["Date", "Revenue (INR)", "Collected (INR)", "Invoice Count"];
+      rows = dailySales.map((item: any) => [
+        item.date,
+        item.revenue.toString(),
+        item.collected.toString(),
+        item.count.toString()
+      ]);
+    } else {
+      return;
+    }
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   const tabs = [
@@ -136,7 +246,18 @@ export default function ReportsPage() {
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>Reports & Analytics</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>Business intelligence overview</p>
         </div>
-        <button className="btn btn-secondary btn-sm">
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={handleExport}
+          disabled={
+            (activeTab === "overview" && !dailySales) ||
+            (activeTab === "products" && !productSales) ||
+            (activeTab === "customers" && !customerSales) ||
+            (activeTab === "outstanding" && !outstanding) ||
+            (activeTab === "profit" && !profit) ||
+            (activeTab === "gst" && !gstData)
+          }
+        >
           <Download size={15} />
           Export Report
         </button>
@@ -514,30 +635,181 @@ export default function ReportsPage() {
 
       {/* GST Tab */}
       {activeTab === "gst" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card">
-          <div className="card-header">
-            <span style={{ fontWeight: 600 }}>GST Report</span>
-          </div>
-          <div className="card-body">
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <div className="form-group">
-                <label className="form-label">Month</label>
-                <select className="form-input form-select">
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString("default", { month: "long" })}</option>
-                  ))}
-                </select>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          <div className="card">
+            <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 600 }}>GST Report Filter</span>
+              <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>Monthly Filing</span>
+            </div>
+            <div className="card-body">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                <div className="form-group">
+                  <label className="form-label">Month</label>
+                  <select
+                    className="form-input form-select"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{new Date(0, i).toLocaleString("default", { month: "long" })}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Year</label>
+                  <select
+                    className="form-input form-select"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  >
+                    {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Year</label>
-                <select className="form-input form-select">
-                  {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
-                </select>
+              <button
+                className="btn btn-primary"
+                style={{ marginTop: "1rem" }}
+                onClick={() => refetchGst()}
+              >
+                Generate GST Report
+              </button>
+            </div>
+          </div>
+
+          {isLoadingGst ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1rem" }}>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="card" style={{ padding: "1.25rem" }}>
+                    <div className="skeleton" style={{ width: "80px", height: "0.75rem", marginBottom: "0.5rem" }} />
+                    <div className="skeleton" style={{ width: "120px", height: "1.5rem" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="card" style={{ padding: "1.5rem" }}>
+                <div className="skeleton" style={{ width: "150px", height: "1.25rem", marginBottom: "1rem" }} />
+                {Array(5).fill(null).map((_, i) => (
+                  <div key={i} className="skeleton" style={{ width: "100%", height: "2rem", marginBottom: "0.5rem" }} />
+                ))}
               </div>
             </div>
-            <button className="btn btn-primary" style={{ marginTop: "1rem" }}>Generate GST Report</button>
-          </div>
-        </motion.div>
+          ) : gstData && gstData.totals ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {/* Totals Cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
+                {[
+                  { label: "Taxable Value", value: gstData.totals.taxable, color: "#3b82f6" },
+                  { label: "CGST (Central)", value: gstData.totals.cgst, color: "#f59e0b" },
+                  { label: "SGST (State)", value: gstData.totals.sgst, color: "#f59e0b" },
+                  { label: "IGST (Integrated)", value: gstData.totals.igst, color: "#6366f1" },
+                  { label: "Total GST Tax", value: gstData.totals.gst, color: "#10b981" },
+                ].map((s) => (
+                  <div key={s.label} className="stat-card">
+                    <p className="stat-label">{s.label}</p>
+                    <p className="stat-value" style={{ color: s.color, marginTop: "0.5rem" }}>{formatCurrency(s.value)}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "1.25rem", alignItems: "start" }}>
+                {/* GST Slab Breakdown */}
+                <div className="card">
+                  <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600 }}>Slab Breakdown</span>
+                    <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", fontWeight: 600 }}>Rates</span>
+                  </div>
+                  <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Rate</th>
+                          <th>Taxable</th>
+                          <th>GST Tax</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gstData.gstBreakdown?.length ? (
+                          gstData.gstBreakdown.map((b: { rate: number; taxable: number; gst: number }) => (
+                            <tr key={b.rate}>
+                              <td style={{ fontWeight: 600 }}>{b.rate}%</td>
+                              <td>{formatCurrency(b.taxable)}</td>
+                              <td style={{ fontWeight: 600, color: "var(--brand-600)" }}>{formatCurrency(b.gst)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={3} className="empty-state" style={{ textAlign: "center", padding: "2rem" }}>
+                              No taxable sales
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* GSTR-1 Invoice Ledger */}
+                <div className="card">
+                  <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600 }}>GSTR-1 Invoice Ledger</span>
+                    <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>{gstData.invoiceCount} Invoices</span>
+                  </div>
+                  <div className="table-container" style={{ border: "none", borderRadius: 0, overflowX: "auto" }}>
+                    <table className="table" style={{ minWidth: "750px" }}>
+                      <thead>
+                        <tr>
+                          <th>Invoice</th>
+                          <th>Customer</th>
+                          <th>GSTIN</th>
+                          <th>State</th>
+                          <th>Taxable</th>
+                          <th>CGST</th>
+                          <th>SGST</th>
+                          <th>IGST</th>
+                          <th>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gstData.invoices?.length ? (
+                          gstData.invoices.map((inv: any) => (
+                            <tr key={inv.invoiceNumber}>
+                              <td><span style={{ fontWeight: 600 }}>{inv.invoiceNumber}</span></td>
+                              <td style={{ maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.customer}</td>
+                              <td>
+                                <span style={{
+                                  fontSize: "0.75rem",
+                                  padding: "0.125rem 0.375rem",
+                                  borderRadius: "4px",
+                                  background: inv.gstNumber ? "rgba(16, 185, 129, 0.1)" : "rgba(107, 114, 128, 0.1)",
+                                  color: inv.gstNumber ? "#10b981" : "#6b7280",
+                                  fontWeight: 500,
+                                }}>
+                                  {inv.gstNumber || "B2C"}
+                                </span>
+                              </td>
+                              <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{inv.state || "Tamil Nadu"}</td>
+                              <td>{formatCurrency(inv.taxableAmount)}</td>
+                              <td style={{ color: "var(--text-secondary)" }}>{inv.cgst > 0 ? formatCurrency(inv.cgst) : "-"}</td>
+                              <td style={{ color: "var(--text-secondary)" }}>{inv.sgst > 0 ? formatCurrency(inv.sgst) : "-"}</td>
+                              <td style={{ color: "var(--text-secondary)" }}>{inv.igst > 0 ? formatCurrency(inv.igst) : "-"}</td>
+                              <td style={{ fontWeight: 700 }}>{formatCurrency(inv.totalAmount)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={9} className="empty-state" style={{ textAlign: "center", padding: "3rem" }}>
+                              No invoices in this period.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ) : null}
+        </div>
       )}
     </div>
   );

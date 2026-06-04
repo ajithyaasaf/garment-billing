@@ -101,41 +101,92 @@ router.get('/customer-sales', async (req: AuthRequest, res: Response) => {
 // GET /api/reports/gst
 router.get('/gst', async (req: AuthRequest, res: Response) => {
   const { month, year } = req.query;
+  if (!month || !year) {
+    res.status(400).json({ error: 'Month and year are required parameters' });
+    return;
+  }
+
   const startDate = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + 1);
 
+  const profile = await prisma.businessProfile.findFirst();
+  const businessState = (profile?.state || 'Tamil Nadu').trim().toLowerCase();
+
   const invoices = await prisma.invoice.findMany({
     where: { invoiceDate: { gte: startDate, lt: endDate } },
     include: {
-      customer: { select: { shopName: true, gstNumber: true } },
+      customer: { select: { shopName: true, gstNumber: true, state: true } },
       items: { select: { gstPercent: true, gstAmount: true, totalAmount: true, quantity: true } },
     },
+    orderBy: { invoiceDate: 'asc' },
   });
 
   const gstSummary: Record<number, { rate: number; taxable: number; gst: number }> = {};
+  
+  let totalTaxable = 0;
+  let totalGst = 0;
+  let totalCgst = 0;
+  let totalSgst = 0;
+  let totalIgst = 0;
 
   for (const inv of invoices) {
+    const isLocal = (inv.customer.state || 'Tamil Nadu').trim().toLowerCase() === businessState;
+    
     for (const item of inv.items) {
       if (!gstSummary[item.gstPercent]) {
         gstSummary[item.gstPercent] = { rate: item.gstPercent, taxable: 0, gst: 0 };
       }
-      gstSummary[item.gstPercent].taxable += item.totalAmount - item.gstAmount;
+      
+      const itemTaxable = item.totalAmount - item.gstAmount;
+      gstSummary[item.gstPercent].taxable += itemTaxable;
       gstSummary[item.gstPercent].gst += item.gstAmount;
+      
+      totalTaxable += itemTaxable;
+      totalGst += item.gstAmount;
+      
+      if (isLocal) {
+        totalCgst += item.gstAmount / 2;
+        totalSgst += item.gstAmount / 2;
+      } else {
+        totalIgst += item.gstAmount;
+      }
     }
   }
 
   res.json({
-    period: { month, year },
+    period: { month: parseInt(month as string), year: parseInt(year as string) },
     invoiceCount: invoices.length,
-    gstBreakdown: Object.values(gstSummary),
-    invoices: invoices.map((inv) => ({
-      invoiceNumber: inv.invoiceNumber,
-      customer: inv.customer.shopName,
-      gstNumber: inv.customer.gstNumber,
-      taxAmount: inv.taxAmount,
-      totalAmount: inv.totalAmount,
+    totals: {
+      taxable: Math.round(totalTaxable * 100) / 100,
+      gst: Math.round(totalGst * 100) / 100,
+      cgst: Math.round(totalCgst * 100) / 100,
+      sgst: Math.round(totalSgst * 100) / 100,
+      igst: Math.round(totalIgst * 100) / 100,
+    },
+    gstBreakdown: Object.values(gstSummary).map(item => ({
+      rate: item.rate,
+      taxable: Math.round(item.taxable * 100) / 100,
+      gst: Math.round(item.gst * 100) / 100,
     })),
+    invoices: invoices.map((inv) => {
+      const isLocal = (inv.customer.state || 'Tamil Nadu').trim().toLowerCase() === businessState;
+      const invGst = inv.items.reduce((sum, item) => sum + item.gstAmount, 0);
+      const invTaxable = inv.items.reduce((sum, item) => sum + (item.totalAmount - item.gstAmount), 0);
+      return {
+        invoiceNumber: inv.invoiceNumber,
+        invoiceDate: inv.invoiceDate,
+        customer: inv.customer.shopName,
+        gstNumber: inv.customer.gstNumber,
+        state: inv.customer.state,
+        taxableAmount: Math.round(invTaxable * 100) / 100,
+        cgst: isLocal ? Math.round((invGst / 2) * 100) / 100 : 0,
+        sgst: isLocal ? Math.round((invGst / 2) * 100) / 100 : 0,
+        igst: isLocal ? 0 : Math.round(invGst * 100) / 100,
+        taxAmount: Math.round(invGst * 100) / 100,
+        totalAmount: Math.round(inv.totalAmount * 100) / 100,
+      };
+    }),
   });
 });
 
