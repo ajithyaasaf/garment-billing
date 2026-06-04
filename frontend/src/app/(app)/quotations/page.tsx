@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, FileText, Copy, ArrowRight } from "lucide-react";
+import { Plus, Search, FileText, Copy, ArrowRight, Download } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getQuotationStatusBadge, debounce } from "@/lib/utils";
@@ -134,6 +134,16 @@ export default function QuotationsPage() {
                           Invoice
                         </button>
                       )}
+                      <Link href={`/quotations/${q.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
+                        <FileText size={14} />
+                      </Link>
+                      <button 
+                        className="btn btn-ghost btn-sm btn-icon" 
+                        title="Download/Print PDF"
+                        onClick={() => window.open(`/quotations/${q.id}?print=true`, "_blank")}
+                      >
+                        <Download size={14} />
+                      </button>
                       <button
                         className="btn btn-ghost btn-sm btn-icon"
                         onClick={() => duplicateMutation.mutate(q.id)}

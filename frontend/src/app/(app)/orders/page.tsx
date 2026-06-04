@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingBag, Plus, Filter } from "lucide-react";
+import { ShoppingBag, Plus, Filter, Download, FileText } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getOrderStatusBadge } from "@/lib/utils";
@@ -101,7 +101,7 @@ export default function OrdersPage() {
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(order.createdAt)}</td>
                   <td><span className={`badge ${getOrderStatusBadge(order.status)}`}>{order.status}</span></td>
                   <td>
-                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
                       {order.status === "PENDING" && (
                         <>
                           <button className="btn btn-sm" style={{ background: "#dcfce7", color: "#15803d", border: "none", borderRadius: "0.375rem", cursor: "pointer", padding: "0.25rem 0.625rem", fontSize: "0.75rem" }}
@@ -114,6 +114,16 @@ export default function OrdersPage() {
                           </button>
                         </>
                       )}
+                      <Link href={`/orders/${order.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
+                        <FileText size={14} />
+                      </Link>
+                      <button 
+                        className="btn btn-ghost btn-sm btn-icon" 
+                        title="Download/Print PDF"
+                        onClick={() => window.open(`/orders/${order.id}?print=true`, "_blank")}
+                      >
+                        <Download size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -48,6 +49,15 @@ export default function QuotationDetailPage() {
       toast.error(err.response?.data?.error || "Failed to duplicate quotation");
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && quotation && typeof window !== "undefined" && window.location.search.includes("print=true")) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, quotation]);
 
   const handlePrint = () => {
     window.print();

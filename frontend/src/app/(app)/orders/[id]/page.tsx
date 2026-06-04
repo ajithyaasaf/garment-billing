@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -36,6 +37,15 @@ export default function OrderDetailPage() {
       toast.error(err.response?.data?.error || "Failed to convert order to invoice");
     },
   });
+
+  useEffect(() => {
+    if (!isLoading && order && typeof window !== "undefined" && window.location.search.includes("print=true")) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, order]);
 
   const handlePrint = () => {
     window.print();
