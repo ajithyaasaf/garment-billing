@@ -1,0 +1,53 @@
+name: Deploy Backend to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Git LFS
+        run: git lfs install
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Configure Git credentials
+          git config --global user.name "ajithyaasaf"
+          git config --global user.email "ajithkannan.ag@gmail.com"
+          
+          # Clone the Hugging Face Space repository (force clean clone)
+          git clone https://yaasaf:$HF_TOKEN@huggingface.co/spaces/yaasaf/garment-erp-backend hf-space
+          
+          # Clear existing contents of the Space repo (except git config metadata)
+          find hf-space -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
+          
+          # Copy the backend files to the Space repository
+          cp -r backend/* hf-space/
+          cp backend/.dockerignore hf-space/ 2>/dev/null || true
+          
+          # Change directory to the Space repo
+          cd hf-space
+          
+          # Stage and commit changes
+          git add .
+          
+          # Only commit and push if there are changes
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "Deploy: Sync backend from GitHub commit ${{ github.sha }}"
+            git push origin main --force
+          else
+            echo "No changes to deploy."
+          fi
