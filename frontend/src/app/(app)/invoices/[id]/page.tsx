@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -102,6 +102,15 @@ export default function InvoiceDetailPage() {
     },
   });
 
+  useEffect(() => {
+    if (!isLoading && invoice && typeof window !== "undefined" && window.location.search.includes("print=true")) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, invoice]);
+
   if (isLoading) {
     return (
       <div style={{ padding: "2rem" }}>
@@ -122,7 +131,7 @@ export default function InvoiceDetailPage() {
   }
 
   return (
-    <div style={{ maxWidth: "1000px" }}>
+    <div style={{ maxWidth: "1000px", width: "100%" }}>
       {/* Header */}
       <div className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -155,13 +164,13 @@ export default function InvoiceDetailPage() {
         </div>
       </div>
 
-      <div className="print-layout" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.25rem", alignItems: "start" }}>
+      <div className="print-layout invoice-details-layout" style={{ display: "grid", gap: "1.25rem", alignItems: "start" }}>
         {/* Main Details Panel */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card print-full">
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem", minWidth: 0, width: "100%" }}>
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card print-full" style={{ minWidth: 0, width: "100%", overflow: "hidden" }}>
             <div className="card-body">
               {/* Billing Info Grid */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
+              <div className="billing-grid" style={{ display: "grid", gap: "1.5rem", marginBottom: "2rem" }}>
                 <div>
                   <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600 }}>From</span>
                   <div style={{ fontWeight: 700, fontSize: "1rem", marginTop: "0.25rem" }}>{business?.name || "GarmentOS Wholesale"}</div>
@@ -203,7 +212,7 @@ export default function InvoiceDetailPage() {
               </div>
 
               {/* Dates */}
-              <div style={{ display: "flex", gap: "2rem", borderTop: "1px solid var(--border-color)", borderBottom: "1px solid var(--border-color)", padding: "0.75rem 0", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+              <div className="dates-container" style={{ display: "flex", gap: "2rem", borderTop: "1px solid var(--border-color)", borderBottom: "1px solid var(--border-color)", padding: "0.75rem 0", marginBottom: "1.5rem", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
                   <Calendar size={14} color="var(--text-tertiary)" />
                   <span style={{ color: "var(--text-secondary)" }}>Invoice Date:</span>
@@ -406,6 +415,27 @@ export default function InvoiceDetailPage() {
           main {
             margin-left: 0 !important;
             padding: 0 !important;
+          }
+        }
+        .invoice-details-layout {
+          grid-template-columns: 2fr 1fr;
+        }
+        .billing-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        @media (max-width: 768px) {
+          .invoice-details-layout {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 576px) {
+          .billing-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem !important;
+          }
+          .dates-container {
+            flex-direction: column;
+            gap: 0.75rem !important;
           }
         }
       `}</style>
