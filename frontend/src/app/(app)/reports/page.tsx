@@ -149,18 +149,22 @@ export default function ReportsPage() {
         "IGST (INR)",
         "Total Invoice Value (INR)"
       ];
-      rows = (gstData.invoices || []).map((inv: any) => [
-        inv.invoiceNumber,
-        new Date(inv.invoiceDate).toLocaleDateString("en-IN"),
-        inv.customer,
-        inv.gstNumber || "URP",
-        inv.state || "Tamil Nadu",
-        inv.taxableAmount.toString(),
-        inv.cgst.toString(),
-        inv.sgst.toString(),
-        inv.igst.toString(),
-        inv.totalAmount.toString()
-      ]);
+      rows = (gstData.invoices || []).map((inv: any) => {
+        const d = new Date(inv.invoiceDate);
+        const formattedDate = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+        return [
+          inv.invoiceNumber,
+          formattedDate,
+          inv.customer,
+          inv.gstNumber || "URP",
+          inv.state || "Tamil Nadu",
+          inv.taxableAmount.toFixed(2),
+          inv.cgst.toFixed(2),
+          inv.sgst.toFixed(2),
+          inv.igst.toFixed(2),
+          inv.totalAmount.toFixed(2)
+        ];
+      });
     } else if (activeTab === "products" && productSales) {
       filename = `Product_Sales_Report.csv`;
       headers = ["Product Name", "Quantity Sold", "Total Sales Value (INR)"];
