@@ -435,7 +435,7 @@ export default function ReportsPage() {
       {/* Products Tab */}
       {activeTab === "products" && (
         isLoadingProducts ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="skeleton" style={{ width: "150px", height: "1rem" }} />
               {Array(6).fill(null).map((_, i) => (
@@ -448,7 +448,7 @@ export default function ReportsPage() {
             </div>
           </div>
         ) : productSales ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="card">
               <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 600 }}>Top Selling Products</span>
@@ -557,7 +557,7 @@ export default function ReportsPage() {
       {activeTab === "outstanding" && (
         isLoadingOutstanding ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="card" style={{ padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   <div className="skeleton" style={{ width: "100px", height: "0.75rem" }} />
@@ -574,7 +574,7 @@ export default function ReportsPage() {
           </div>
         ) : outstanding ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
                 { label: "Total Outstanding", value: formatCurrency(outstanding.total), color: "#ef4444" },
                 { label: "Outstanding Invoices", value: outstanding.count, color: "#f59e0b" },
@@ -618,7 +618,7 @@ export default function ReportsPage() {
       {/* Profit Tab */}
       {activeTab === "profit" && (
         isLoadingProfit ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
               <div className="skeleton" style={{ width: "120px", height: "1.25rem" }} />
               {Array(4).fill(null).map((_, i) => (
@@ -632,7 +632,7 @@ export default function ReportsPage() {
           </div>
         ) : profit ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="card card-body">
                 <h3 style={{ fontWeight: 700, marginBottom: "1rem" }}>P&L Summary</h3>
                 {[
@@ -694,7 +694,7 @@ export default function ReportsPage() {
               <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>Monthly Filing</span>
             </div>
             <div className="card-body">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="form-group">
                   <label className="form-label">Month</label>
                   <select
@@ -738,7 +738,7 @@ export default function ReportsPage() {
 
           {isLoadingGst ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "1rem" }}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div key={i} className="card" style={{ padding: "1.25rem" }}>
                     <div className="skeleton" style={{ width: "80px", height: "0.75rem", marginBottom: "0.5rem" }} />
@@ -771,9 +771,9 @@ export default function ReportsPage() {
                 ))}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "1.25rem", alignItems: "start" }}>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                 {/* GST Slab Breakdown */}
-                <div className="card">
+                <div className="card lg:col-span-1">
                   <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 600 }}>Slab Breakdown</span>
                     <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", fontWeight: 600 }}>Rates</span>
@@ -809,7 +809,7 @@ export default function ReportsPage() {
                 </div>
 
                 {/* GSTR-1 Invoice Ledger */}
-                <div className="card">
+                <div className="card lg:col-span-2">
                   <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontWeight: 600 }}>GSTR-1 Invoice Ledger</span>
                     <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>{gstData.invoiceCount} Invoices</span>

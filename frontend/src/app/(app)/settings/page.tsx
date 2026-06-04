@@ -111,7 +111,7 @@ export default function SettingsPage() {
           <form onSubmit={businessForm.handleSubmit((data) => businessMutation.mutate(data as Record<string, unknown>))}>
             <div className="card">
               <div className="card-header"><span style={{ fontWeight: 600 }}>Business Information</span></div>
-              <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                   <label className="form-label">Business Name *</label>
                   <input className="form-input" {...businessForm.register("name", { required: true })} defaultValue={business.name} />
@@ -138,7 +138,7 @@ export default function SettingsPage() {
 
             <div className="card" style={{ marginTop: "1rem" }}>
               <div className="card-header"><span style={{ fontWeight: 600 }}>Bank Details</span></div>
-              <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { key: "bankName", label: "Bank Name" },
                   { key: "bankAccount", label: "Account Number" },
@@ -155,7 +155,7 @@ export default function SettingsPage() {
 
             <div className="card" style={{ marginTop: "1rem" }}>
               <div className="card-header"><span style={{ fontWeight: 600 }}>Invoice Settings</span></div>
-              <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { key: "invoicePrefix", label: "Invoice Prefix" },
                   { key: "quotationPrefix", label: "Quotation Prefix" },
@@ -201,7 +201,7 @@ export default function SettingsPage() {
               <div className="card-header"><span style={{ fontWeight: 600 }}>Add New Staff Member</span></div>
               <div className="card-body">
                 <form onSubmit={staffForm.handleSubmit((data) => staffMutation.mutate(data as Record<string, unknown>))}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                       { key: "name", label: "Full Name", required: true },
                       { key: "email", label: "Email", required: true, type: "email" },

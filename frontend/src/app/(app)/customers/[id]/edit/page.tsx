@@ -107,7 +107,7 @@ export default function EditCustomerPage() {
       <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
           <div className="card-header"><span style={{ fontWeight: 600 }}>Shop Information</span></div>
-          <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Shop Name *</label>
               <input className={`form-input ${errors.shopName ? "error" : ""}`} placeholder="e.g. Murugan Dress House"
@@ -139,7 +139,7 @@ export default function EditCustomerPage() {
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="card" style={{ marginTop: "1rem" }}>
           <div className="card-header"><span style={{ fontWeight: 600 }}>Address</span></div>
-          <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Address</label>
               <textarea className="form-input" rows={2} placeholder="Street address" {...register("address")} style={{ resize: "vertical" }} />
@@ -161,7 +161,7 @@ export default function EditCustomerPage() {
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="card" style={{ marginTop: "1rem" }}>
           <div className="card-header"><span style={{ fontWeight: 600 }}>Credit & Payment</span></div>
-          <div className="card-body" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+          <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="form-group">
               <label className="form-label">Credit Limit (₹)</label>
               <input type="number" min="0" className="form-input" placeholder="0" {...register("creditLimit")} />
