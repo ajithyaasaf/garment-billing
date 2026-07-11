@@ -315,7 +315,7 @@ export default function NewProductPage() {
                       <div key={item.label} style={{ textAlign: "center" }}>
                         <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{item.label}</div>
                         <div style={{ fontWeight: 700, fontSize: "1rem" }}>
-                          ₹{item.value.toFixed(2)}
+                          ₹{Number(item.value).toFixed(2)}
                         </div>
                       </div>
                     ))}
