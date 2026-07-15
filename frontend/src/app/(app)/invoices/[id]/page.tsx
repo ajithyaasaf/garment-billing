@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X } from "lucide-react";
+import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X, Pencil } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -150,6 +150,9 @@ export default function InvoiceDetailPage() {
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem" }}>
+          <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-secondary btn-sm">
+            <Pencil size={14} /> Edit Invoice
+          </Link>
           <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
             <Download size={14} /> Print / Save PDF
           </button>

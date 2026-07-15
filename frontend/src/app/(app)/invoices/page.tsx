@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Receipt, Download } from "lucide-react";
+import { Plus, Search, Receipt, Download, Eye, Pencil } from "lucide-react";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, debounce } from "@/lib/utils";
 import Link from "next/link";
@@ -130,8 +130,11 @@ export default function InvoicesPage() {
                     <td><span className={`badge ${getPaymentStatusBadge(inv.paymentStatus)}`}>{inv.paymentStatus}</span></td>
                     <td>
                       <div style={{ display: "flex", gap: "0.375rem" }}>
-                        <Link href={`/invoices/${inv.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
-                          <Receipt size={14} />
+                        <Link href={`/invoices/${inv.id}`} className="btn btn-ghost btn-sm btn-icon" title="View Invoice">
+                          <Eye size={14} />
+                        </Link>
+                        <Link href={`/invoices/${inv.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit Invoice">
+                          <Pencil size={14} />
                         </Link>
                         <button 
                           className="btn btn-ghost btn-sm btn-icon" 

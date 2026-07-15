@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingBag, Plus, Filter, Download, FileText } from "lucide-react";
+import { ShoppingBag, Plus, Filter, Download, FileText, Eye } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getOrderStatusBadge } from "@/lib/utils";
@@ -115,7 +115,7 @@ export default function OrdersPage() {
                         </>
                       )}
                       <Link href={`/orders/${order.id}`} className="btn btn-ghost btn-sm btn-icon" title="View">
-                        <FileText size={14} />
+                        <Eye size={14} />
                       </Link>
                       <button 
                         className="btn btn-ghost btn-sm btn-icon" 

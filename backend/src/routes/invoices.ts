@@ -238,4 +238,204 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
   res.status(201).json(duplicate);
 });
 
+// PUT /api/invoices/:id - Edit an invoice
+router.put('/:id', async (req: AuthRequest, res: Response) => {
+  const {
+    customerId, items, discountAmount, discountPercent,
+    paymentMethod, paidAmount, notes, termsConditions, dueDate,
+  } = req.body;
+
+  if (!items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Items array is required' });
+  }
+
+  try {
+    const existingInvoice = await prisma.invoice.findUnique({
+      where: { id: req.params.id },
+      include: { items: true, payments: true },
+    });
+    if (!existingInvoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    let subtotal = 0;
+    let taxAmount = 0;
+
+    const processedItems = items.map((item: {
+      productId: string;
+      variantId?: string;
+      productName: string;
+      color?: string;
+      size?: string;
+      sku?: string;
+      quantity: number;
+      unitPrice: number;
+      gstPercent: number;
+      discount?: number;
+    }) => {
+      const itemTotal = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+      const gst = itemTotal * (item.gstPercent / 100);
+      subtotal += itemTotal;
+      taxAmount += gst;
+      return {
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        color: item.color,
+        size: item.size,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        gstPercent: item.gstPercent,
+        gstAmount: gst,
+        totalAmount: itemTotal + gst,
+        discount: item.discount || 0,
+      };
+    });
+
+    const totalAmount = subtotal + taxAmount - (discountAmount || 0);
+
+    // Reconcile payments
+    let finalPaidAmount = existingInvoice.paidAmount;
+    let paymentMethodToUse = existingInvoice.paymentMethod;
+
+    if (existingInvoice.payments.length <= 1) {
+      finalPaidAmount = paidAmount !== undefined ? Number(paidAmount) : existingInvoice.paidAmount;
+      paymentMethodToUse = paymentMethod || existingInvoice.paymentMethod;
+    } else {
+      // If multiple payments, sum the ledger payments
+      finalPaidAmount = existingInvoice.payments.reduce((sum, p) => sum + p.amount, 0);
+    }
+
+    const finalDueAmount = Math.max(0, totalAmount - finalPaidAmount);
+    const paymentStatus =
+      finalPaidAmount === 0 ? 'UNPAID' : finalPaidAmount >= totalAmount ? 'PAID' : 'PARTIAL';
+
+    // Calculate stock changes for variants
+    const variantIds = new Set<string>();
+    existingInvoice.items.forEach(item => {
+      if (item.variantId) variantIds.add(item.variantId);
+    });
+    items.forEach((item: any) => {
+      if (item.variantId) variantIds.add(item.variantId);
+    });
+
+    const stockAdjustments: Array<{
+      variantId: string;
+      productId: string;
+      delta: number;
+    }> = [];
+
+    for (const vId of variantIds) {
+      const oldQty = existingInvoice.items
+        .filter(item => item.variantId === vId)
+        .reduce((sum, item) => sum + item.quantity, 0);
+
+      const newQty = items
+        .filter((item: any) => item.variantId === vId)
+        .reduce((sum, item) => sum + item.quantity, 0);
+
+      const delta = newQty - oldQty;
+      if (delta !== 0) {
+        const productId = existingInvoice.items.find(item => item.variantId === vId)?.productId
+          || items.find((item: any) => item.variantId === vId)?.productId;
+        if (productId) {
+          stockAdjustments.push({ variantId: vId, productId, delta });
+        }
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Process stock adjustments
+      for (const adj of stockAdjustments) {
+        const variant = await tx.productVariant.findUnique({ where: { id: adj.variantId } });
+        if (variant) {
+          const newStock = Math.max(0, variant.stock - adj.delta);
+          await tx.productVariant.update({
+            where: { id: adj.variantId },
+            data: { stock: newStock },
+          });
+
+          await tx.stockMovement.create({
+            data: {
+              productId: adj.productId,
+              variantId: adj.variantId,
+              type: adj.delta > 0 ? 'OUTWARD' : 'RETURN',
+              quantity: -adj.delta,
+              previousStock: variant.stock,
+              newStock,
+              reason: `Invoice Edit ${existingInvoice.invoiceNumber}`,
+              reference: existingInvoice.id,
+              createdBy: req.user?.id,
+            },
+          });
+        }
+      }
+
+      // 2. Delete old items
+      await tx.invoiceItem.deleteMany({
+        where: { invoiceId: existingInvoice.id },
+      });
+
+      // 3. Handle payments reconciliation if payments count <= 1
+      if (existingInvoice.payments.length <= 1) {
+        if (existingInvoice.payments.length === 1) {
+          if (finalPaidAmount === 0) {
+            await tx.payment.delete({
+              where: { id: existingInvoice.payments[0].id },
+            });
+          } else {
+            await tx.payment.update({
+              where: { id: existingInvoice.payments[0].id },
+              data: {
+                amount: finalPaidAmount,
+                method: paymentMethodToUse,
+              },
+            });
+          }
+        } else if (finalPaidAmount > 0) {
+          await tx.payment.create({
+            data: {
+              invoiceId: existingInvoice.id,
+              amount: finalPaidAmount,
+              method: paymentMethodToUse,
+            },
+          });
+        }
+      }
+
+      // 4. Update the invoice details and create new items
+      const updated = await tx.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          customerId,
+          subtotal,
+          discountAmount: discountAmount || 0,
+          discountPercent: discountPercent || 0,
+          taxAmount,
+          totalAmount,
+          paidAmount: finalPaidAmount,
+          dueAmount: finalDueAmount,
+          paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
+          paymentMethod: paymentMethodToUse,
+          notes,
+          termsConditions,
+          dueDate: dueDate ? new Date(dueDate) : null,
+          items: {
+            create: processedItems,
+          },
+        },
+        include: { customer: true, items: true, payments: true },
+      });
+
+      return updated;
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('Invoice edit error:', error);
+    res.status(500).json({ error: error.message || 'Failed to edit invoice' });
+  }
+});
+
 export default router;
