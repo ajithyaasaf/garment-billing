@@ -8,7 +8,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { TrendingUp, DollarSign, Users, Package, Download, BarChart3, Loader2 } from "lucide-react";
+import { TrendingUp, DollarSign, Users, Package, Download, BarChart3, Loader2, ShoppingBag, Truck, UserPlus, Calendar } from "lucide-react";
 import api from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import { toast } from "sonner";
@@ -95,7 +95,7 @@ const getStateCode = (state: string): string => {
 };
 
 export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "gst" | "outstanding" | "profit">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "customers" | "purchases" | "gst" | "outstanding" | "profit">("overview");
   
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -132,9 +132,27 @@ export default function ReportsPage() {
     enabled: activeTab === "customers",
   });
 
+  const { data: purchasesSummary, isLoading: isLoadingPurchasesSummary } = useQuery({
+    queryKey: ["report-purchases-summary"],
+    queryFn: async () => (await api.get("/reports/purchases-summary")).data,
+    enabled: activeTab === "purchases",
+  });
+
+  const { data: realtimeSummary, isLoading: isLoadingRealtimeSummary } = useQuery({
+    queryKey: ["report-realtime-summary"],
+    queryFn: async () => (await api.get("/reports/realtime-summary")).data,
+    enabled: activeTab === "overview",
+  });
+
   const { data: outstanding, isLoading: isLoadingOutstanding } = useQuery({
     queryKey: ["report-outstanding"],
     queryFn: async () => (await api.get("/reports/outstanding")).data,
+    enabled: activeTab === "outstanding",
+  });
+
+  const { data: supplierOutstanding, isLoading: isLoadingSupplierOutstanding } = useQuery({
+    queryKey: ["report-supplier-outstanding"],
+    queryFn: async () => (await api.get("/reports/supplier-outstanding")).data,
     enabled: activeTab === "outstanding",
   });
 
@@ -248,6 +266,66 @@ export default function ReportsPage() {
         Number(inv.dueAmount.toFixed(2)),
         inv.paymentStatus
       ]);
+    } else if (activeTab === "outstanding" && outstanding) {
+      const workbook = XLSX.utils.book_new();
+      filename = `Outstanding_Dues_Report.xlsx`;
+      
+      const custHeaders = ["Invoice Number", "Customer Name", "City", "Total Amount (INR)", "Due Amount (INR)", "Payment Status"];
+      const custRows = (outstanding.invoices || []).map((inv: any) => [
+        inv.invoiceNumber,
+        inv.customer.shopName || inv.customer.ownerName,
+        inv.customer.city,
+        Number(inv.totalAmount.toFixed(2)),
+        Number(inv.dueAmount.toFixed(2)),
+        inv.paymentStatus
+      ]);
+      const custSheet = XLSX.utils.aoa_to_sheet([custHeaders, ...custRows]);
+      custSheet["!cols"] = [{ wch: 18 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(workbook, custSheet, "Customer Receivables");
+
+      if (supplierOutstanding) {
+        const suppHeaders = ["Purchase Bill #", "Supplier Shop", "City", "Total Amount (INR)", "Due Amount (INR)", "Payment Status"];
+        const suppRows = (supplierOutstanding.bills || []).map((bill: any) => [
+          bill.billNumber,
+          bill.supplier.shopName || bill.supplier.ownerName,
+          bill.supplier.city,
+          Number(bill.totalAmount.toFixed(2)),
+          Number(bill.dueAmount.toFixed(2)),
+          bill.paymentStatus
+        ]);
+        const suppSheet = XLSX.utils.aoa_to_sheet([suppHeaders, ...suppRows]);
+        suppSheet["!cols"] = [{ wch: 18 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
+        XLSX.utils.book_append_sheet(workbook, suppSheet, "Supplier Payables");
+      }
+      
+      XLSX.writeFile(workbook, filename);
+      return;
+    } else if (activeTab === "purchases" && purchasesSummary) {
+      const workbook = XLSX.utils.book_new();
+      filename = `Purchases_Sourcing_Report.xlsx`;
+      
+      const suppHeaders = ["Supplier Name", "Total Sourced (INR)"];
+      const suppRows = (purchasesSummary.topSuppliers || []).map((s: any) => [
+        s.shopName,
+        Number(s.total.toFixed(2))
+      ]);
+      const suppSheet = XLSX.utils.aoa_to_sheet([suppHeaders, ...suppRows]);
+      suppSheet["!cols"] = [{ wch: 30 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(workbook, suppSheet, "Top Suppliers");
+
+      const monthlyHeaders = ["Month", "Total Purchases (INR)", "Paid (INR)", "Bill Count"];
+      const monthlyRows = (purchasesSummary.monthly || []).map((m: any) => [
+        monthNames[m.month - 1],
+        Number(m.total.toFixed(2)),
+        Number(m.paid.toFixed(2)),
+        m.count
+      ]);
+      const monthlySheet = XLSX.utils.aoa_to_sheet([monthlyHeaders, ...monthlyRows]);
+      monthlySheet["!cols"] = [{ wch: 15 }, { wch: 22 }, { wch: 20 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(workbook, monthlySheet, "Monthly Sourcing");
+      
+      XLSX.writeFile(workbook, filename);
+      return;
     } else if (activeTab === "profit" && profit) {
       filename = `Profit_Loss_Report.xlsx`;
       headers = ["Metric", "Amount (INR)"];
@@ -286,6 +364,7 @@ export default function ReportsPage() {
     { key: "overview", label: "Overview" },
     { key: "products", label: "Products" },
     { key: "customers", label: "Customers" },
+    { key: "purchases", label: "Purchases & Suppliers" },
     { key: "outstanding", label: "Outstanding" },
     { key: "profit", label: "Profit" },
     { key: "gst", label: "GST" },
@@ -305,7 +384,8 @@ export default function ReportsPage() {
             (activeTab === "overview" && !dailySales) ||
             (activeTab === "products" && !productSales) ||
             (activeTab === "customers" && !customerSales) ||
-            (activeTab === "outstanding" && !outstanding) ||
+            (activeTab === "purchases" && !purchasesSummary) ||
+            (activeTab === "outstanding" && !outstanding && !supplierOutstanding) ||
             (activeTab === "profit" && !profit) ||
             (activeTab === "gst" && !gstData)
           }
@@ -339,34 +419,71 @@ export default function ReportsPage() {
       {/* Overview Tab */}
       {activeTab === "overview" && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Profit summary cards */}
-          {isLoadingProfit ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
-              {[1, 2, 3, 4].map((i) => (
+          {/* Real-time summaries */}
+          {isLoadingRealtimeSummary ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem" }}>
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="stat-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem", width: "70%" }}>
-                      <div className="skeleton" style={{ width: "90px", height: "0.75rem" }} />
-                      <div className="skeleton" style={{ width: "130px", height: "1.5rem", marginTop: "0.25rem" }} />
-                    </div>
-                    <div className="skeleton" style={{ width: "2.5rem", height: "2.5rem", borderRadius: "var(--radius-lg)" }} />
-                  </div>
+                  <div className="skeleton" style={{ width: "90px", height: "0.75rem" }} />
+                  <div className="skeleton" style={{ width: "130px", height: "1.5rem", marginTop: "0.5rem" }} />
                 </div>
               ))}
             </div>
-          ) : profit ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem" }}>
+          ) : realtimeSummary ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem" }}>
               {[
-                { label: "Total Revenue", value: formatCurrency(profit.revenue), icon: TrendingUp, color: "#3b82f6" },
-                { label: "Cost of Goods", value: formatCurrency(profit.costOfGoods), icon: Package, color: "#f59e0b" },
-                { label: "Gross Profit", value: formatCurrency(profit.grossProfit), icon: DollarSign, color: "#10b981" },
-                { label: "Profit Margin", value: `${profit.profitMargin}%`, icon: BarChart3, color: "#6366f1" },
+                { 
+                  label: "Today's Sales", 
+                  value: formatCurrency(realtimeSummary.today.salesRevenue), 
+                  subtitle: `${realtimeSummary.today.salesCount} bookings today`, 
+                  detail: `Wholesale: ${formatCurrency(realtimeSummary.today.wholesaleRevenue)} | Retail: ${formatCurrency(realtimeSummary.today.retailRevenue)}`,
+                  icon: DollarSign, 
+                  color: "#10b981" 
+                },
+                { 
+                  label: "Today's Sourcing", 
+                  value: formatCurrency(realtimeSummary.today.purchaseTotal), 
+                  subtitle: `${realtimeSummary.today.purchaseCount} purchase bills today`, 
+                  detail: null,
+                  icon: Truck, 
+                  color: "#f59e0b" 
+                },
+                { 
+                  label: "Weekly Sales", 
+                  value: formatCurrency(realtimeSummary.week.salesRevenue), 
+                  subtitle: `${realtimeSummary.week.salesCount} bookings this week`, 
+                  detail: `Wholesale: ${formatCurrency(realtimeSummary.week.wholesaleRevenue)} | Retail: ${formatCurrency(realtimeSummary.week.retailRevenue)}`,
+                  icon: TrendingUp, 
+                  color: "#3b82f6" 
+                },
+                { 
+                  label: "Weekly Sourcing", 
+                  value: formatCurrency(realtimeSummary.week.purchaseTotal), 
+                  subtitle: `${realtimeSummary.week.purchaseCount} bills this week`, 
+                  detail: null,
+                  icon: Package, 
+                  color: "#f97316" 
+                },
+                { 
+                  label: "New Customers", 
+                  value: `${realtimeSummary.week.newCustomers} New`, 
+                  subtitle: "Acquired in last 7 days", 
+                  detail: null,
+                  icon: UserPlus, 
+                  color: "#8b5cf6" 
+                },
               ].map((card) => (
                 <div key={card.label} className="stat-card">
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div>
                       <p className="stat-label">{card.label}</p>
                       <p className="stat-value" style={{ marginTop: "0.5rem" }}>{card.value}</p>
+                      <p style={{ fontSize: "0.725rem", color: "var(--text-tertiary)", marginTop: "0.25rem" }}>{card.subtitle}</p>
+                      {card.detail && (
+                        <p style={{ fontSize: "0.6875rem", color: "var(--brand-600)", fontWeight: 500, marginTop: "0.25rem" }}>
+                          {card.detail}
+                        </p>
+                      )}
                     </div>
                     <div className="stat-icon" style={{ background: `${card.color}15`, color: card.color }}>
                       <card.icon size={18} />
@@ -377,34 +494,67 @@ export default function ReportsPage() {
             </div>
           ) : null}
 
-          {/* Monthly Revenue Chart */}
-          {isLoadingMonthly ? (
-            <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
-              <div className="skeleton" style={{ width: "200px", height: "1rem" }} />
-              <div className="skeleton" style={{ width: "100%", height: "280px" }} />
-            </div>
-          ) : monthlySales ? (
+          {/* 2-Column Row for Fast Moving Products and Monthly Sales Trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Fast Selling Products (Real-time moving items) */}
             <div className="card">
               <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600 }}>Monthly Revenue – {new Date().getFullYear()}</span>
-                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>12 months</span>
+                <span style={{ fontWeight: 600 }}>Fast-Moving Products (Dresses)</span>
+                <span className="badge badge-success" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>Live velocity</span>
               </div>
               <div className="card-body">
-                <ResponsiveContainer width="100%" height={280}>
-                  <AreaChart data={monthlySales.map((m: { month: number; revenue: number; collected: number }) => ({ ...m, name: monthNames[m.month - 1] }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--text-secondary)" }} />
-                    <YAxis tick={{ fontSize: 12, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
-                    <Tooltip content={<CustomMonthlyTooltip />} />
-                    <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f615" strokeWidth={2} name="Revenue" />
-                    <Area type="monotone" dataKey="collected" stroke="#10b981" fill="#10b98115" strokeWidth={2} name="Collected" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {isLoadingRealtimeSummary ? (
+                    Array(5).fill(null).map((_, i) => (
+                      <div key={i} className="skeleton" style={{ width: "100%", height: "2.5rem" }} />
+                    ))
+                  ) : realtimeSummary?.fastMoving?.length ? (
+                    realtimeSummary.fastMoving.map((p: any, i: number) => (
+                      <div key={p.productId} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                        <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", background: `${COLORS[i % COLORS.length]}15`, color: COLORS[i % COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem" }}>{i + 1}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{p.productName}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{formatNumber(p.quantity)} units sold recently</div>
+                        </div>
+                        <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{formatCurrency(p.revenue)}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.875rem" }}>No sales recorded yet</p>
+                  )}
+                </div>
               </div>
             </div>
-          ) : null}
 
-          {/* Daily Sales (last 30d) */}
+            {/* Monthly Revenue Trend Chart */}
+            {isLoadingMonthly ? (
+              <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
+                <div className="skeleton" style={{ width: "200px", height: "1rem" }} />
+                <div className="skeleton" style={{ width: "100%", height: "280px" }} />
+              </div>
+            ) : monthlySales ? (
+              <div className="card">
+                <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>Monthly Revenue Trend – {new Date().getFullYear()}</span>
+                  <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>12 months</span>
+                </div>
+                <div className="card-body" style={{ padding: "1rem 0.5rem 0.5rem 0.5rem" }}>
+                  <ResponsiveContainer width="100%" height={230}>
+                    <AreaChart data={monthlySales.map((m: { month: number; revenue: number; collected: number }) => ({ ...m, name: monthNames[m.month - 1] }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
+                      <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
+                      <Tooltip content={<CustomMonthlyTooltip />} />
+                      <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#3b82f615" strokeWidth={2} name="Revenue" />
+                      <Area type="monotone" dataKey="collected" stroke="#10b981" fill="#10b98115" strokeWidth={2} name="Collected" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Daily Sales Chart */}
           {isLoadingDaily ? (
             <div className="card" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.5rem" }}>
               <div className="skeleton" style={{ width: "180px", height: "1rem" }} />
@@ -413,7 +563,7 @@ export default function ReportsPage() {
           ) : dailySales ? (
             <div className="card">
               <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600 }}>Daily Sales – Last 30 Days</span>
+                <span style={{ fontWeight: 600 }}>Daily Sales Trend – Last 30 Days</span>
                 <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", fontWeight: 600 }}>30 days</span>
               </div>
               <div className="card-body">
@@ -553,9 +703,76 @@ export default function ReportsPage() {
         ) : null
       )}
 
+      {/* Purchases & Suppliers Tab */}
+      {activeTab === "purchases" && (
+        isLoadingPurchasesSummary ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "150px", height: "1rem" }} />
+              {Array(6).fill(null).map((_, i) => (
+                <div key={i} className="skeleton" style={{ width: "100%", height: "2rem" }} />
+              ))}
+            </div>
+            <div className="card" style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div className="skeleton" style={{ width: "150px", height: "1rem" }} />
+              <div className="skeleton" style={{ width: "100%", height: "240px" }} />
+            </div>
+          </div>
+        ) : purchasesSummary ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Top Suppliers */}
+            <div className="card">
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Top Sourcing Suppliers</span>
+                <span className="badge badge-primary" style={{ background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6" }}>
+                  {purchasesSummary.topSuppliers?.length || 0} Suppliers
+                </span>
+              </div>
+              <div className="card-body">
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                  {purchasesSummary.topSuppliers?.map((s: { shopName: string; total: number }, i: number) => (
+                    <div key={s.shopName} style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                      <div style={{ width: "1.75rem", height: "1.75rem", borderRadius: "0.375rem", background: `${COLORS[i % COLORS.length]}15`, color: COLORS[i % COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.75rem" }}>{i + 1}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{s.shopName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Sourcing Partner</div>
+                      </div>
+                      <div style={{ fontWeight: 700 }}>{formatCurrency(s.total || 0)}</div>
+                    </div>
+                  ))}
+                  {(!purchasesSummary.topSuppliers || purchasesSummary.topSuppliers.length === 0) && (
+                    <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.875rem" }}>No supplier purchases logged yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Purchases Chart */}
+            <div className="card">
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Monthly Sourcing Trend</span>
+                <span className="badge badge-success" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>This Year</span>
+              </div>
+              <div className="card-body" style={{ padding: "1rem 0.5rem 0.5rem 0.5rem" }}>
+                <ResponsiveContainer width="100%" height={260}>
+                  <AreaChart data={purchasesSummary.monthly?.map((m: any) => ({ ...m, name: monthNames[m.month - 1] }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--text-secondary)" }} />
+                    <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
+                    <Tooltip content={<CustomMonthlyTooltip />} />
+                    <Area type="monotone" dataKey="total" stroke="#f59e0b" fill="#f59e0b15" strokeWidth={2} name="Total Sourced" />
+                    <Area type="monotone" dataKey="paid" stroke="#10b981" fill="#10b98115" strokeWidth={2} name="Total Paid" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </motion.div>
+        ) : null
+      )}
+
       {/* Outstanding Tab */}
       {activeTab === "outstanding" && (
-        isLoadingOutstanding ? (
+        isLoadingOutstanding || isLoadingSupplierOutstanding ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
@@ -576,39 +793,77 @@ export default function ReportsPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: "Total Outstanding", value: formatCurrency(outstanding.total), color: "#ef4444" },
-                { label: "Outstanding Invoices", value: outstanding.count, color: "#f59e0b" },
-                { label: "Avg Outstanding", value: outstanding.count ? formatCurrency(outstanding.total / outstanding.count) : "₹0", color: "#6366f1" },
+                { label: "Customer Receivables", value: formatCurrency(outstanding.total), count: `${outstanding.count} invoices`, color: "#ef4444" },
+                { label: "Supplier Payables", value: formatCurrency(supplierOutstanding?.total || 0), count: `${supplierOutstanding?.count || 0} bills`, color: "#f59e0b" },
+                { label: "Net Position (Receivables - Payables)", value: formatCurrency(outstanding.total - (supplierOutstanding?.total || 0)), count: "Outstanding balance", color: (outstanding.total - (supplierOutstanding?.total || 0)) >= 0 ? "#10b981" : "#ef4444" },
               ].map((s) => (
                 <div key={s.label} className="stat-card">
                   <p className="stat-label">{s.label}</p>
                   <p className="stat-value" style={{ color: s.color, marginTop: "0.5rem" }}>{s.value}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>{s.count}</p>
                 </div>
               ))}
             </div>
-            <div className="card">
-              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontWeight: 600 }}>Outstanding Invoices</span>
-                <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", borderRadius: "10px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", fontWeight: 600 }}>{outstanding.count} invoices</span>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Customer Receivables Card */}
+              <div className="card">
+                <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>Customer Receivables (Outstanding Invoices)</span>
+                  <span className="badge badge-danger" style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444" }}>
+                    {outstanding.count} pending
+                  </span>
+                </div>
+                <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr><th>Invoice #</th><th>Customer</th><th>City</th><th>Due</th></tr>
+                    </thead>
+                    <tbody>
+                      {outstanding.invoices?.map((inv: any) => (
+                        <tr key={inv.id}>
+                          <td><a href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{inv.invoiceNumber}</a></td>
+                          <td style={{ fontWeight: 500 }}>{inv.customer.shopName || inv.customer.ownerName}</td>
+                          <td style={{ color: "var(--text-secondary)" }}>{inv.customer.city}</td>
+                          <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(inv.dueAmount)}</td>
+                        </tr>
+                      ))}
+                      {(!outstanding.invoices || outstanding.invoices.length === 0) && (
+                        <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-secondary)" }}>No outstanding customer dues</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
-                <table className="table">
-                  <thead>
-                    <tr><th>Invoice #</th><th>Customer</th><th>City</th><th>Total</th><th>Due</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {outstanding.invoices?.map((inv: { id: string; invoiceNumber: string; customer: { shopName?: string; ownerName?: string; whatsapp: string; city: string }; totalAmount: number; dueAmount: number; paymentStatus: string }) => (
-                      <tr key={inv.id}>
-                        <td><a href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{inv.invoiceNumber}</a></td>
-                        <td style={{ fontWeight: 500 }}>{inv.customer.shopName || inv.customer.ownerName}</td>
-                        <td style={{ color: "var(--text-secondary)" }}>{inv.customer.city}</td>
-                        <td>{formatCurrency(inv.totalAmount)}</td>
-                        <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(inv.dueAmount)}</td>
-                        <td><span className="badge badge-warning">{inv.paymentStatus}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+
+              {/* Supplier Payables Card */}
+              <div className="card">
+                <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600 }}>Supplier Payables (Outstanding Purchase Bills)</span>
+                  <span className="badge badge-warning" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" }}>
+                    {supplierOutstanding?.count || 0} unpaid
+                  </span>
+                </div>
+                <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr><th>Bill #</th><th>Supplier</th><th>City</th><th>Due</th></tr>
+                    </thead>
+                    <tbody>
+                      {supplierOutstanding?.bills?.map((bill: any) => (
+                        <tr key={bill.id}>
+                          <td><a href={`/purchases/${bill.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{bill.billNumber}</a></td>
+                          <td style={{ fontWeight: 500 }}>{bill.supplier.shopName || bill.supplier.ownerName}</td>
+                          <td style={{ color: "var(--text-secondary)" }}>{bill.supplier.city}</td>
+                          <td style={{ fontWeight: 700, color: "#f59e0b" }}>{formatCurrency(bill.dueAmount)}</td>
+                        </tr>
+                      ))}
+                      {(!supplierOutstanding?.bills || supplierOutstanding.bills.length === 0) && (
+                        <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-secondary)" }}>No outstanding supplier dues</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </motion.div>

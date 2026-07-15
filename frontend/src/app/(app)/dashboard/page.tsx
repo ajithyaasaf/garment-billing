@@ -75,6 +75,7 @@ interface DashboardData {
   totalCustomers: number;
   topProducts: { productName: string; _sum: { quantity: number } }[];
   totalProducts: number;
+  pendingOrdersCount: number;
 }
 
 function StatCard({
@@ -187,6 +188,13 @@ export default function DashboardPage() {
       subtitle: `${data?.monthlySales.count || 0} invoices`,
       icon: TrendingUp,
       color: "#3b82f6",
+    },
+    {
+      title: "Pending Orders",
+      value: String(data?.pendingOrdersCount || 0),
+      subtitle: "WhatsApp pack list",
+      icon: ShoppingBag,
+      color: "#8b5cf6",
     },
     {
       title: "Customer Dues",

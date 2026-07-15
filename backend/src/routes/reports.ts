@@ -235,4 +235,178 @@ router.get('/profit', async (req: AuthRequest, res: Response) => {
   res.json({ revenue, costOfGoods, grossProfit, profitMargin: profitMargin.toFixed(2) });
 });
 
+// GET /api/reports/supplier-outstanding
+router.get('/supplier-outstanding', async (_req, res: Response) => {
+  const outstanding = await prisma.purchaseBill.findMany({
+    where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
+    include: { supplier: { select: { shopName: true, ownerName: true, whatsapp: true, city: true } } },
+    orderBy: { dueAmount: 'desc' },
+  });
+
+  const total = outstanding.reduce((sum, bill) => sum + bill.dueAmount, 0);
+
+  res.json({ total, count: outstanding.length, bills: outstanding });
+});
+
+// GET /api/reports/purchases-summary
+router.get('/purchases-summary', async (_req, res: Response) => {
+  const currentYear = new Date().getFullYear();
+  const startDate = new Date(`${currentYear}-01-01`);
+  const endDate = new Date(`${currentYear + 1}-01-01`);
+
+  const bills = await prisma.purchaseBill.findMany({
+    where: { billDate: { gte: startDate, lt: endDate } },
+    select: { billDate: true, totalAmount: true, paidAmount: true },
+  });
+
+  const monthly: Record<number, { month: number; total: number; paid: number; count: number }> = {};
+  for (let i = 1; i <= 12; i++) {
+    monthly[i] = { month: i, total: 0, paid: 0, count: 0 };
+  }
+
+  for (const bill of bills) {
+    const m = bill.billDate.getMonth() + 1;
+    monthly[m].total += bill.totalAmount;
+    monthly[m].paid += bill.paidAmount;
+    monthly[m].count++;
+  }
+
+  // Top Suppliers
+  const topSuppliersAgg = await prisma.purchaseBill.groupBy({
+    by: ['supplierId'],
+    _sum: { totalAmount: true },
+    orderBy: { _sum: { totalAmount: 'desc' } },
+    take: 5,
+  });
+
+  const supplierIds = topSuppliersAgg.map(s => s.supplierId);
+  const suppliers = await prisma.supplier.findMany({
+    where: { id: { in: supplierIds } },
+    select: { id: true, shopName: true, ownerName: true },
+  });
+
+  const topSuppliers = topSuppliersAgg.map(s => {
+    const d = suppliers.find(sup => sup.id === s.supplierId);
+    return {
+      supplierId: s.supplierId,
+      shopName: d?.shopName || d?.ownerName || 'Unknown',
+      total: s._sum.totalAmount || 0,
+    };
+  });
+
+  res.json({
+    monthly: Object.values(monthly),
+    topSuppliers,
+  });
+});
+
+// GET /api/reports/realtime-summary
+router.get('/realtime-summary', async (req: AuthRequest, res: Response) => {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 7);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const [
+    todaySales,
+    weekSales,
+    todayPurchases,
+    weekPurchases,
+    newCustomersCount,
+    fastestMovingProducts,
+  ] = await Promise.all([
+    // Today's Sales
+    prisma.invoice.findMany({
+      where: { invoiceDate: { gte: todayStart } },
+      include: { customer: { select: { type: true } } },
+    }),
+    // Week's Sales
+    prisma.invoice.findMany({
+      where: { invoiceDate: { gte: weekStart } },
+      include: { customer: { select: { type: true } } },
+    }),
+    // Today's Purchases (Sourcing)
+    prisma.purchaseBill.aggregate({
+      where: { billDate: { gte: todayStart } },
+      _sum: { totalAmount: true, paidAmount: true },
+      _count: true,
+    }),
+    // Week's Purchases (Sourcing)
+    prisma.purchaseBill.aggregate({
+      where: { billDate: { gte: weekStart } },
+      _sum: { totalAmount: true, paidAmount: true },
+      _count: true,
+    }),
+    // New Customers this week
+    prisma.customer.count({
+      where: { createdAt: { gte: weekStart }, isActive: true },
+    }),
+    // Fast Selling Products (Top 5)
+    prisma.invoiceItem.groupBy({
+      by: ['productId', 'productName'],
+      _sum: { quantity: true, totalAmount: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 5,
+    }),
+  ]);
+
+  let todaySalesRevenue = 0;
+  let todaySalesCollected = 0;
+  let todayWholesaleRevenue = 0;
+  let todayRetailRevenue = 0;
+  for (const inv of todaySales) {
+    todaySalesRevenue += inv.totalAmount;
+    todaySalesCollected += inv.paidAmount;
+    if (inv.customer?.type === 'WHOLESALE') {
+      todayWholesaleRevenue += inv.totalAmount;
+    } else {
+      todayRetailRevenue += inv.totalAmount;
+    }
+  }
+
+  let weekSalesRevenue = 0;
+  let weekSalesCollected = 0;
+  let weekWholesaleRevenue = 0;
+  let weekRetailRevenue = 0;
+  for (const inv of weekSales) {
+    weekSalesRevenue += inv.totalAmount;
+    weekSalesCollected += inv.paidAmount;
+    if (inv.customer?.type === 'WHOLESALE') {
+      weekWholesaleRevenue += inv.totalAmount;
+    } else {
+      weekRetailRevenue += inv.totalAmount;
+    }
+  }
+
+  res.json({
+    today: {
+      salesRevenue: todaySalesRevenue,
+      wholesaleRevenue: todayWholesaleRevenue,
+      retailRevenue: todayRetailRevenue,
+      salesCollected: todaySalesCollected,
+      salesCount: todaySales.length,
+      purchaseTotal: todayPurchases._sum?.totalAmount || 0,
+      purchaseCount: todayPurchases._count || 0,
+    },
+    week: {
+      salesRevenue: weekSalesRevenue,
+      wholesaleRevenue: weekWholesaleRevenue,
+      retailRevenue: weekRetailRevenue,
+      salesCollected: weekSalesCollected,
+      salesCount: weekSales.length,
+      purchaseTotal: weekPurchases._sum?.totalAmount || 0,
+      purchaseCount: weekPurchases._count || 0,
+      newCustomers: newCustomersCount || 0,
+    },
+    fastMoving: fastestMovingProducts.map(p => ({
+      productId: p.productId,
+      productName: p.productName,
+      quantity: p._sum.quantity || 0,
+      revenue: p._sum.totalAmount || 0,
+    })),
+  });
+});
+
 export default router;

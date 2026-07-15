@@ -20,6 +20,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     totalCustomers,
     topProducts,
     totalProducts,
+    pendingOrdersCount,
   ] = await Promise.all([
     // Today's sales total
     prisma.invoice.aggregate({
@@ -88,6 +89,10 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     }),
     // Total products
     prisma.product.count(),
+    // Pending Orders count (WhatsApp bookings to process)
+    prisma.order.count({
+      where: { status: 'PENDING' },
+    }),
   ]);
 
   res.json({
@@ -113,6 +118,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     totalCustomers,
     topProducts,
     totalProducts,
+    pendingOrdersCount,
   });
 });
 
