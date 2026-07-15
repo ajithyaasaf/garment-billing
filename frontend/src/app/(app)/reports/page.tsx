@@ -101,6 +101,8 @@ export default function ReportsPage() {
   const currentYear = new Date().getFullYear();
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [purchaseYear, setPurchaseYear] = useState<number>(currentYear);
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<"ALL" | "WHOLESALE" | "RETAIL">("ALL");
 
   const { data: gstData, isLoading: isLoadingGst, isFetching: isFetchingGst, refetch: refetchGst } = useQuery({
     queryKey: ["report-gst", selectedMonth, selectedYear],
@@ -109,32 +111,36 @@ export default function ReportsPage() {
   });
 
   const { data: dailySales, isLoading: isLoadingDaily } = useQuery({
-    queryKey: ["report-daily"],
+    queryKey: ["report-daily", selectedYear],
     queryFn: async () => (await api.get("/reports/sales-daily?days=30")).data,
     enabled: activeTab === "overview",
   });
 
   const { data: monthlySales, isLoading: isLoadingMonthly } = useQuery({
-    queryKey: ["report-monthly"],
-    queryFn: async () => (await api.get(`/reports/sales-monthly?year=${new Date().getFullYear()}`)).data,
+    queryKey: ["report-monthly", selectedYear],
+    queryFn: async () => (await api.get(`/reports/sales-monthly?year=${selectedYear}`)).data,
     enabled: activeTab === "overview",
   });
 
   const { data: productSales, isLoading: isLoadingProducts } = useQuery({
-    queryKey: ["report-products"],
+    queryKey: ["report-products", selectedYear],
     queryFn: async () => (await api.get("/reports/product-sales?limit=10")).data,
     enabled: activeTab === "products",
   });
 
   const { data: customerSales, isLoading: isLoadingCustomers } = useQuery({
-    queryKey: ["report-customers"],
-    queryFn: async () => (await api.get("/reports/customer-sales")).data,
+    queryKey: ["report-customers", customerTypeFilter, selectedYear],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (customerTypeFilter !== "ALL") params.set("customerType", customerTypeFilter);
+      return (await api.get(`/reports/customer-sales?${params}`)).data;
+    },
     enabled: activeTab === "customers",
   });
 
   const { data: purchasesSummary, isLoading: isLoadingPurchasesSummary } = useQuery({
-    queryKey: ["report-purchases-summary"],
-    queryFn: async () => (await api.get("/reports/purchases-summary")).data,
+    queryKey: ["report-purchases-summary", purchaseYear],
+    queryFn: async () => (await api.get(`/reports/purchases-summary?year=${purchaseYear}`)).data,
     enabled: activeTab === "purchases",
   });
 
@@ -145,8 +151,12 @@ export default function ReportsPage() {
   });
 
   const { data: outstanding, isLoading: isLoadingOutstanding } = useQuery({
-    queryKey: ["report-outstanding"],
-    queryFn: async () => (await api.get("/reports/outstanding")).data,
+    queryKey: ["report-outstanding", customerTypeFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (customerTypeFilter !== "ALL") params.set("customerType", customerTypeFilter);
+      return (await api.get(`/reports/outstanding?${params}`)).data;
+    },
     enabled: activeTab === "outstanding",
   });
 
@@ -157,10 +167,11 @@ export default function ReportsPage() {
   });
 
   const { data: profit, isLoading: isLoadingProfit } = useQuery({
-    queryKey: ["report-profit"],
-    queryFn: async () => (await api.get("/reports/profit")).data,
+    queryKey: ["report-profit", selectedYear],
+    queryFn: async () => (await api.get(`/reports/profit?fromDate=${selectedYear}-01-01&toDate=${selectedYear}-12-31`)).data,
     enabled: activeTab === "overview" || activeTab === "profit",
   });
+
 
   const handleExport = () => {
     let headers: string[] = [];
@@ -396,7 +407,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: "0.25rem", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.625rem", padding: "0.25rem", marginBottom: "1.5rem", overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: "0.25rem", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.625rem", padding: "0.25rem", marginBottom: "1rem", overflowX: "auto" }}>
         {tabs.map((tab) => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)}
             style={{
@@ -415,6 +426,90 @@ export default function ReportsPage() {
           </button>
         ))}
       </div>
+
+      {/* Contextual Filter Bar */}
+      {(activeTab !== "overview") && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.25rem", padding: "0.875rem 1rem", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.625rem" }}>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Filter by:</span>
+
+          {/* Year filter — shown on most tabs */}
+          {(activeTab === "products" || activeTab === "customers" || activeTab === "profit" || activeTab === "gst") && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Year</label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                style={{ fontSize: "0.8125rem", padding: "0.3rem 0.6rem", borderRadius: "0.375rem", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", cursor: "pointer" }}
+              >
+                {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Purchase year — only on purchases tab */}
+          {activeTab === "purchases" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Year</label>
+              <select
+                value={purchaseYear}
+                onChange={(e) => setPurchaseYear(Number(e.target.value))}
+                style={{ fontSize: "0.8125rem", padding: "0.3rem 0.6rem", borderRadius: "0.375rem", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", cursor: "pointer" }}
+              >
+                {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Month filter — only on GST tab */}
+          {activeTab === "gst" && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Month</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                style={{ fontSize: "0.8125rem", padding: "0.3rem 0.6rem", borderRadius: "0.375rem", border: "1px solid var(--border-color)", background: "var(--bg-primary)", color: "var(--text-primary)", cursor: "pointer" }}
+              >
+                {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m, i) => (
+                  <option key={i + 1} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Customer Type filter — customers and outstanding tabs */}
+          {(activeTab === "customers" || activeTab === "outstanding") && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <label style={{ fontSize: "0.75rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Customer Type</label>
+              <div style={{ display: "flex", gap: "0.25rem" }}>
+                {(["ALL", "WHOLESALE", "RETAIL"] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setCustomerTypeFilter(type)}
+                    style={{
+                      padding: "0.3rem 0.7rem",
+                      borderRadius: "0.375rem",
+                      border: "1px solid",
+                      borderColor: customerTypeFilter === type ? "var(--brand-600)" : "var(--border-color)",
+                      background: customerTypeFilter === type ? "var(--brand-600)" : "transparent",
+                      color: customerTypeFilter === type ? "white" : "var(--text-secondary)",
+                      fontSize: "0.75rem",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {type === "ALL" ? "All" : type.charAt(0) + type.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Overview Tab */}
       {activeTab === "overview" && (
@@ -741,7 +836,11 @@ export default function ReportsPage() {
                     </div>
                   ))}
                   {(!purchasesSummary.topSuppliers || purchasesSummary.topSuppliers.length === 0) && (
-                    <p style={{ textAlign: "center", color: "var(--text-secondary)", fontSize: "0.875rem" }}>No supplier purchases logged yet</p>
+                    <div style={{ textAlign: "center", padding: "2rem 1rem" }}>
+                      <Truck size={36} style={{ color: "var(--text-tertiary)", marginBottom: "0.75rem", display: "block", margin: "0 auto 0.75rem" }} />
+                      <p style={{ fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.25rem" }}>No purchases recorded for {purchaseYear}</p>
+                      <p style={{ fontSize: "0.8125rem", color: "var(--text-tertiary)" }}>Add purchase bills from your suppliers to see sourcing analytics here.</p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -751,7 +850,7 @@ export default function ReportsPage() {
             <div className="card">
               <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontWeight: 600 }}>Monthly Sourcing Trend</span>
-                <span className="badge badge-success" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>This Year</span>
+                <span className="badge badge-success" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>{purchaseYear}</span>
               </div>
               <div className="card-body" style={{ padding: "1rem 0.5rem 0.5rem 0.5rem" }}>
                 <ResponsiveContainer width="100%" height={260}>
@@ -767,7 +866,13 @@ export default function ReportsPage() {
               </div>
             </div>
           </motion.div>
-        ) : null
+        ) : (
+          <div className="card" style={{ padding: "3rem", textAlign: "center" }}>
+            <Truck size={48} style={{ color: "var(--text-tertiary)", margin: "0 auto 1rem", display: "block" }} />
+            <p style={{ fontWeight: 600, fontSize: "1rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>Purchases data unavailable</p>
+            <p style={{ fontSize: "0.875rem", color: "var(--text-tertiary)" }}>Make sure the backend is running and you have recorded purchase bills.</p>
+          </div>
+        )
       )}
 
       {/* Outstanding Tab */}

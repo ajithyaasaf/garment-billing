@@ -192,10 +192,19 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/reports/outstanding
-router.get('/outstanding', async (_req, res: Response) => {
+router.get('/outstanding', async (req: AuthRequest, res: Response) => {
+  const { customerType } = req.query;
+  const customerWhere: Record<string, unknown> = {};
+  if (customerType === 'WHOLESALE' || customerType === 'RETAIL') {
+    customerWhere.type = customerType;
+  }
+
   const outstanding = await prisma.invoice.findMany({
-    where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
-    include: { customer: { select: { shopName: true, ownerName: true, whatsapp: true, city: true } } },
+    where: {
+      paymentStatus: { in: ['UNPAID', 'PARTIAL'] },
+      ...(Object.keys(customerWhere).length ? { customer: customerWhere } : {}),
+    },
+    include: { customer: { select: { shopName: true, ownerName: true, whatsapp: true, city: true, type: true } } },
     orderBy: { dueAmount: 'desc' },
   });
 
@@ -249,8 +258,9 @@ router.get('/supplier-outstanding', async (_req, res: Response) => {
 });
 
 // GET /api/reports/purchases-summary
-router.get('/purchases-summary', async (_req, res: Response) => {
-  const currentYear = new Date().getFullYear();
+router.get('/purchases-summary', async (req: AuthRequest, res: Response) => {
+  const yearParam = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+  const currentYear = isNaN(yearParam) ? new Date().getFullYear() : yearParam;
   const startDate = new Date(`${currentYear}-01-01`);
   const endDate = new Date(`${currentYear + 1}-01-01`);
 
