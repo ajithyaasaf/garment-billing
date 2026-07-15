@@ -163,56 +163,58 @@ export default function CustomerDetailPage() {
           </div>
 
           {/* Recent Quotations */}
-          <div className="card">
-            <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 600 }}>Recent Quotations</span>
-              <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Last 5 quotations</span>
-            </div>
-            <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Quotation #</th>
-                    <th>Date</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customer.quotations?.length > 0 ? (
-                    customer.quotations.map((quo: any) => (
-                      <tr key={quo.id}>
-                        <td>
-                          <Link href={`/quotations/${quo.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
-                            {quo.quotationNumber}
-                          </Link>
-                        </td>
-                        <td>{new Date(quo.createdAt).toLocaleDateString("en-IN")}</td>
-                        <td style={{ fontWeight: 700 }}>{formatCurrency(quo.totalAmount)}</td>
-                        <td>
-                          <span className={`badge ${quo.status === "CONVERTED" ? "badge-success" : "badge-gray"
-                            }`}>
-                            {quo.status}
-                          </span>
+          {customer.type !== "RETAIL" && (
+            <div className="card">
+              <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 600 }}>Recent Quotations</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Last 5 quotations</span>
+              </div>
+              <div className="table-container" style={{ border: "none", borderRadius: 0 }}>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Quotation #</th>
+                      <th>Date</th>
+                      <th>Total</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customer.quotations?.length > 0 ? (
+                      customer.quotations.map((quo: any) => (
+                        <tr key={quo.id}>
+                          <td>
+                            <Link href={`/quotations/${quo.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
+                              {quo.quotationNumber}
+                            </Link>
+                          </td>
+                          <td>{new Date(quo.createdAt).toLocaleDateString("en-IN")}</td>
+                          <td style={{ fontWeight: 700 }}>{formatCurrency(quo.totalAmount)}</td>
+                          <td>
+                            <span className={`badge ${quo.status === "CONVERTED" ? "badge-success" : "badge-gray"
+                              }`}>
+                              {quo.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="empty-state" style={{ textAlign: "center", padding: "1.5rem" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                            <span>No quotations created yet.</span>
+                            <Link href={`/quotations/new?customerId=${customer.id}`} className="btn btn-secondary btn-sm">
+                              Create Quotation
+                            </Link>
+                          </div>
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="empty-state" style={{ textAlign: "center", padding: "1.5rem" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
-                          <span>No quotations created yet.</span>
-                          <Link href={`/quotations/new?customerId=${customer.id}`} className="btn btn-secondary btn-sm">
-                            Create Quotation
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column - Analytics and Details */}
@@ -234,15 +236,17 @@ export default function CustomerDetailPage() {
               </div>
 
               {/* Progress limit bar */}
-              <div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
-                  <span>Credit Usage</span>
-                  <span>Limit: {formatCurrency(customer.creditLimit)}</span>
+              {customer.type !== "RETAIL" && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
+                    <span>Credit Usage</span>
+                    <span>Limit: {formatCurrency(customer.creditLimit)}</span>
+                  </div>
+                  <div style={{ height: "6px", width: "100%", background: "var(--border-color)", borderRadius: "3px", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${limitPercent}%`, background: limitPercent > 80 ? "var(--danger)" : "var(--brand-600)" }} />
+                  </div>
                 </div>
-                <div style={{ height: "6px", width: "100%", background: "var(--border-color)", borderRadius: "3px", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${limitPercent}%`, background: limitPercent > 80 ? "var(--danger)" : "var(--brand-600)" }} />
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

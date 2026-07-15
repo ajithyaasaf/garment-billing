@@ -11,6 +11,7 @@ import {
   Users,
   DollarSign,
   ShoppingBag,
+  Truck,
 } from "lucide-react";
 import {
   AreaChart,
@@ -70,6 +71,7 @@ interface DashboardData {
     customer: { shopName?: string; ownerName?: string };
   }[];
   outstandingPayments: { total: number; count: number };
+  outstandingSupplierPayments: { total: number; count: number };
   totalCustomers: number;
   topProducts: { productName: string; _sum: { quantity: number } }[];
   totalProducts: number;
@@ -187,18 +189,25 @@ export default function DashboardPage() {
       color: "#3b82f6",
     },
     {
-      title: "Outstanding",
+      title: "Customer Dues",
       value: formatCurrency(data?.outstandingPayments.total || 0),
       subtitle: `${data?.outstandingPayments.count || 0} pending`,
       icon: TrendingDown,
       color: "#ef4444",
     },
     {
+      title: "Supplier Dues",
+      value: formatCurrency(data?.outstandingSupplierPayments?.total || 0),
+      subtitle: `${data?.outstandingSupplierPayments?.count || 0} unpaid bills`,
+      icon: Truck,
+      color: "#f59e0b",
+    },
+    {
       title: "Low Stock Items",
       value: String(data?.lowStockCount || 0),
       subtitle: "Variants below min",
       icon: AlertTriangle,
-      color: "#f59e0b",
+      color: "#f97316",
     },
     {
       title: "Total Customers",

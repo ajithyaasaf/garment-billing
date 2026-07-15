@@ -11,10 +11,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   const query = q as string;
 
   if (!query || query.length < 2) {
-    return res.json({ products: [], customers: [], quotations: [], invoices: [] });
+    return res.json({ products: [], customers: [], quotations: [], invoices: [], suppliers: [], purchases: [] });
   }
 
-  const [products, customers, quotations, invoices] = await Promise.all([
+  const [products, customers, quotations, invoices, suppliers, purchases] = await Promise.all([
     type === 'all' || type === 'products'
       ? prisma.product.findMany({
           where: {
@@ -69,9 +69,36 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           select: { id: true, invoiceNumber: true, totalAmount: true, paymentStatus: true, customer: { select: { shopName: true, ownerName: true } } },
         })
       : [],
+    type === 'all' || type === 'suppliers'
+      ? prisma.supplier.findMany({
+          where: {
+            isActive: true,
+            OR: [
+              { shopName: { contains: query, mode: 'insensitive' } },
+              { ownerName: { contains: query, mode: 'insensitive' } },
+              { whatsapp: { contains: query } },
+            ],
+          },
+          take: 5,
+          select: { id: true, shopName: true, ownerName: true, whatsapp: true, city: true },
+        })
+      : [],
+    type === 'all' || type === 'purchases'
+      ? prisma.purchaseBill.findMany({
+          where: {
+            OR: [
+              { billNumber: { contains: query, mode: 'insensitive' } },
+              { supplier: { shopName: { contains: query, mode: 'insensitive' } } },
+              { supplier: { ownerName: { contains: query, mode: 'insensitive' } } },
+            ],
+          },
+          take: 5,
+          select: { id: true, billNumber: true, totalAmount: true, paymentStatus: true, supplier: { select: { shopName: true, ownerName: true } } },
+        })
+      : [],
   ]);
 
-  res.json({ products, customers, quotations, invoices });
+  res.json({ products, customers, quotations, invoices, suppliers, purchases });
 });
 
 export default router;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Package, Users, Receipt, FileText, X, ArrowRight } from "lucide-react";
+import { Search, Package, Users, Receipt, FileText, X, ArrowRight, Truck, ShoppingCart } from "lucide-react";
 import api from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
@@ -13,6 +13,8 @@ interface SearchResults {
   customers: { id: string; shopName?: string; ownerName: string; whatsapp: string; city: string }[];
   quotations: { id: string; quotationNumber: string; totalAmount: number; status: string; customer: { shopName?: string; ownerName?: string } }[];
   invoices: { id: string; invoiceNumber: string; totalAmount: number; paymentStatus: string; customer: { shopName?: string; ownerName?: string } }[];
+  suppliers: { id: string; shopName: string; ownerName: string; whatsapp: string; city: string }[];
+  purchases: { id: string; billNumber: string; totalAmount: number; paymentStatus: string; supplier: { shopName: string; ownerName: string } }[];
 }
 
 interface CommandPaletteProps {
@@ -23,7 +25,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState<"all" | "products" | "customers" | "invoices" | "quotations">("all");
+  const [activeSection, setActiveSection] = useState<"all" | "products" | "customers" | "invoices" | "quotations" | "suppliers" | "purchases">("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -56,7 +58,9 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     results.products?.length > 0 ||
     results.customers?.length > 0 ||
     results.invoices?.length > 0 ||
-    results.quotations?.length > 0
+    results.quotations?.length > 0 ||
+    results.suppliers?.length > 0 ||
+    results.purchases?.length > 0
   );
 
   const sections = [
@@ -65,6 +69,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
     { key: "customers", label: "Customers" },
     { key: "invoices", label: "Invoices" },
     { key: "quotations", label: "Quotations" },
+    { key: "suppliers", label: "Suppliers" },
+    { key: "purchases", label: "Purchases" },
   ] as const;
 
   return (
@@ -229,6 +235,39 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>{formatCurrency(q.totalAmount)}</span>
+                        <ArrowRight size={14} color="var(--text-tertiary)" />
+                      </div>
+                    </Link>
+                  ))}
+                </ResultSection>
+              )}
+
+              {/* Suppliers */}
+              {results.suppliers?.length > 0 && (
+                <ResultSection title="Suppliers" icon={Truck} color="#f59e0b">
+                  {results.suppliers.map((s) => (
+                    <Link key={s.id} href={`/suppliers/${s.id}`} onClick={onClose} className="result-item">
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{s.shopName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{s.ownerName} · {s.city}</div>
+                      </div>
+                      <ArrowRight size={14} color="var(--text-tertiary)" />
+                    </Link>
+                  ))}
+                </ResultSection>
+              )}
+
+              {/* Purchases */}
+              {results.purchases?.length > 0 && (
+                <ResultSection title="Purchase Bills" icon={ShoppingCart} color="#ec4899">
+                  {results.purchases.map((p) => (
+                    <Link key={p.id} href={`/purchases/${p.id}`} onClick={onClose} className="result-item">
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{p.billNumber}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{p.supplier.shopName}</div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>{formatCurrency(p.totalAmount)}</span>
                         <ArrowRight size={14} color="var(--text-tertiary)" />
                       </div>
                     </Link>

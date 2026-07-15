@@ -18,6 +18,8 @@ import notificationRoutes from './routes/notifications';
 import settingsRoutes from './routes/settings';
 import stockRoutes from './routes/stock';
 import searchRoutes from './routes/search';
+import supplierRoutes from './routes/suppliers';
+import purchaseRoutes from './routes/purchases';
 
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
@@ -54,6 +56,8 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchases', purchaseRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

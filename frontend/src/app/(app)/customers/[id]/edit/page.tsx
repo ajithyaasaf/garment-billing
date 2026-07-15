@@ -206,26 +206,28 @@ export default function EditCustomerPage() {
           </div>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="card" style={{ marginTop: "1rem" }}>
-          <div className="card-header"><span style={{ fontWeight: 600 }}>Credit & Payment</span></div>
-          <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="form-label">Credit Limit (₹)</label>
-              <input type="number" min="0" className="form-input" placeholder="0" {...register("creditLimit")} />
+        {customerType !== "RETAIL" && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="card" style={{ marginTop: "1rem" }}>
+            <div className="card-header"><span style={{ fontWeight: 600 }}>Credit & Payment</span></div>
+            <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="form-group">
+                <label className="form-label">Credit Limit (₹)</label>
+                <input type="number" min="0" className="form-input" placeholder="0" {...register("creditLimit")} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Payment Terms</label>
+                <select className="form-input form-select" {...register("paymentTerms")}>
+                  <option value="Cash on delivery">Cash on delivery</option>
+                  <option value="7 days">7 days</option>
+                  <option value="15 days">15 days</option>
+                  <option value="30 days">30 days</option>
+                  <option value="45 days">45 days</option>
+                  <option value="60 days">60 days</option>
+                </select>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Payment Terms</label>
-              <select className="form-input form-select" {...register("paymentTerms")}>
-                <option value="Cash on delivery">Cash on delivery</option>
-                <option value="7 days">7 days</option>
-                <option value="15 days">15 days</option>
-                <option value="30 days">30 days</option>
-                <option value="45 days">45 days</option>
-                <option value="60 days">60 days</option>
-              </select>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
           <Link href={`/customers/${id}`} className="btn btn-secondary">Cancel</Link>

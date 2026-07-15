@@ -16,6 +16,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     recentInvoices,
     recentQuotations,
     outstandingPayments,
+    outstandingSupplierPayments,
     totalCustomers,
     topProducts,
     totalProducts,
@@ -70,6 +71,12 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       _sum: { dueAmount: true },
       _count: true,
     }),
+    // Outstanding supplier payments
+    prisma.purchaseBill.aggregate({
+      where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
+      _sum: { dueAmount: true },
+      _count: true,
+    }),
     // Total customers
     prisma.customer.count({ where: { isActive: true } }),
     // Top selling products (by invoice items)
@@ -98,6 +105,10 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     outstandingPayments: {
       total: outstandingPayments._sum.dueAmount || 0,
       count: outstandingPayments._count,
+    },
+    outstandingSupplierPayments: {
+      total: outstandingSupplierPayments._sum.dueAmount || 0,
+      count: outstandingSupplierPayments._count,
     },
     totalCustomers,
     topProducts,

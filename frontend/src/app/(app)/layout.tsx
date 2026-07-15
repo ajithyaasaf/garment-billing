@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Package,
   Search,
+  Truck,
+  ShoppingCart,
 } from "lucide-react";
 import { useAuthStore, useUIStore } from "@/store";
 import { toast } from "sonner";
@@ -29,8 +31,10 @@ const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: Package, label: "Inventory", href: "/inventory" },
   { icon: Users, label: "Customers", href: "/customers" },
+  { icon: Truck, label: "Suppliers", href: "/suppliers" },
   { icon: FileText, label: "Quotations", href: "/quotations" },
   { icon: Receipt, label: "Invoices", href: "/invoices" },
+  { icon: ShoppingCart, label: "Purchases", href: "/purchases" },
   { icon: ShoppingBag, label: "Orders", href: "/orders" },
   { icon: BarChart3, label: "Reports", href: "/reports" },
 ];
@@ -432,8 +436,10 @@ function PageTitle({ pathname }: { pathname: string }) {
     "/dashboard": "Dashboard",
     "/inventory": "Inventory",
     "/customers": "Customers",
+    "/suppliers": "Suppliers",
     "/quotations": "Quotations",
     "/invoices": "Invoices",
+    "/purchases": "Purchases",
     "/orders": "Orders",
     "/reports": "Reports",
     "/settings": "Settings",

@@ -76,6 +76,7 @@ model User {
   quotations   Quotation[]
   invoices     Invoice[]
   orders       Order[]
+  purchaseBills PurchaseBill[]
 
   @@index([email])
   @@map("users")
@@ -152,6 +153,7 @@ model Product {
   quotationItems  QuotationItem[]
   invoiceItems    InvoiceItem[]
   orderItems      OrderItem[]
+  purchaseBillItems PurchaseBillItem[]
 
   @@index([sku])
   @@index([categoryId])
@@ -176,6 +178,7 @@ model ProductVariant {
   quotationItems  QuotationItem[]
   invoiceItems    InvoiceItem[]
   orderItems      OrderItem[]
+  purchaseBillItems PurchaseBillItem[]
 
   @@unique([productId, color, size])
   @@index([productId])
@@ -431,4 +434,99 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// ============================
+// SUPPLIERS & PURCHASES
+// ============================
+
+model Supplier {
+  id           String   @id @default(cuid())
+  shopName     String
+  ownerName    String
+  whatsapp     String
+  email        String?
+  gstNumber    String?
+  address      String?
+  city         String?
+  state        String   @default("Tamil Nadu")
+  pincode      String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  purchaseBills PurchaseBill[]
+
+  @@index([shopName])
+  @@index([whatsapp])
+  @@map("suppliers")
+}
+
+model PurchaseBill {
+  id              String        @id @default(cuid())
+  billNumber      String
+  supplierId      String
+  createdById     String
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod @default(CASH)
+  subtotal        Float
+  discountAmount  Float         @default(0)
+  taxAmount       Float
+  totalAmount     Float
+  paidAmount      Float         @default(0)
+  dueAmount       Float
+  dueDate         DateTime?
+  notes           String?
+  billDate        DateTime      @default(now())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  supplier    Supplier           @relation(fields: [supplierId], references: [id])
+  createdBy   User               @relation(fields: [createdById], references: [id])
+  items       PurchaseBillItem[]
+  payments    PurchasePayment[]
+
+  @@index([supplierId])
+  @@index([paymentStatus])
+  @@index([billDate])
+  @@index([createdAt])
+  @@map("purchase_bills")
+}
+
+model PurchaseBillItem {
+  id             String   @id @default(cuid())
+  purchaseBillId String
+  productId      String
+  variantId      String?
+  productName    String
+  color          String?
+  size           String?
+  quantity       Int
+  unitPrice      Float
+  gstPercent     Float
+  gstAmount      Float
+  totalAmount    Float
+
+  purchaseBill   PurchaseBill     @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id])
+  variant        ProductVariant?  @relation(fields: [variantId], references: [id])
+
+  @@index([purchaseBillId])
+  @@index([productId])
+  @@map("purchase_bill_items")
+}
+
+model PurchasePayment {
+  id             String        @id @default(cuid())
+  purchaseBillId String
+  amount         Float
+  method         PaymentMethod
+  reference      String?
+  paidAt         DateTime      @default(now())
+  notes          String?
+
+  purchaseBill   PurchaseBill  @relation(fields: [purchaseBillId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseBillId])
+  @@map("purchase_payments")
 }

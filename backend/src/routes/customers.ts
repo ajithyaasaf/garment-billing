@@ -11,7 +11,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
   const take = parseInt(limit as string);
 
-  const where: Record<string, unknown> = { isActive: true };
+  const where: Record<string, any> = { isActive: true };
   if (search) {
     where.OR = [
       { shopName: { contains: search as string, mode: 'insensitive' } },
@@ -19,6 +19,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       { whatsapp: { contains: search as string } },
       { city: { contains: search as string, mode: 'insensitive' } },
     ];
+  }
+
+  if (req.query.type && (req.query.type === 'RETAIL' || req.query.type === 'WHOLESALE')) {
+    where.type = req.query.type;
   }
 
   const [customers, total] = await Promise.all([

@@ -19,6 +19,7 @@ interface Customer {
   gstNumber?: string;
   creditLimit: number;
   isActive: boolean;
+  type?: "WHOLESALE" | "RETAIL";
   _count: { invoices: number; quotations: number };
 }
 
@@ -26,6 +27,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState<"" | "WHOLESALE" | "RETAIL">("");
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => {
@@ -36,12 +38,13 @@ export default function CustomersPage() {
   );
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["customers", debouncedSearch, page],
+    queryKey: ["customers", debouncedSearch, page, typeFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "20",
         search: debouncedSearch,
+        ...(typeFilter && { type: typeFilter }),
       });
       const res = await api.get(`/customers?${params}`);
       return res.data;
@@ -74,23 +77,40 @@ export default function CustomersPage() {
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-5 w-full max-w-[400px]">
-        <Search
-          size={15}
-          color="var(--text-tertiary)"
-          style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
-        />
-        <input
-          className="form-input w-full"
-          style={{ paddingLeft: "2.25rem" }}
-          placeholder="Search shop name, owner, phone..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            debouncedSetSearch(e.target.value);
-          }}
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-5 items-stretch sm:items-center">
+        <div className="relative flex-1">
+          <Search
+            size={15}
+            color="var(--text-tertiary)"
+            style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)" }}
+          />
+          <input
+            className="form-input w-full"
+            style={{ paddingLeft: "2.25rem" }}
+            placeholder="Search shop name, owner, phone..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              debouncedSetSearch(e.target.value);
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-3 sm:flex gap-2">
+          {[
+            { key: "", label: "All Customers" },
+            { key: "WHOLESALE", label: "Wholesale" },
+            { key: "RETAIL", label: "Retail" },
+          ].map((type) => (
+            <button
+              key={type.key}
+              className={`btn btn-sm justify-center ${typeFilter === type.key ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => { setTypeFilter(type.key as any); setPage(1); }}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Customer Cards */}
@@ -199,12 +219,16 @@ export default function CustomersPage() {
                 >
                   {[
                     { label: "Invoices", value: customer._count.invoices },
-                    { label: "Quotations", value: customer._count.quotations },
-                    { label: "Credit Limit", value: formatCurrency(customer.creditLimit) },
+                    customer.type === "RETAIL"
+                      ? { label: "Customer Type", value: "Retail" }
+                      : { label: "Quotations", value: customer._count.quotations },
+                    customer.type === "RETAIL"
+                      ? { label: "Credit Limit", value: "None (Cash)" }
+                      : { label: "Credit Limit", value: formatCurrency(customer.creditLimit) },
                   ].map((stat) => (
                     <div key={stat.label} style={{ textAlign: "center" }}>
-                      <div style={{ fontWeight: 700, fontSize: "0.9375rem" }}>{stat.value}</div>
-                      <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)" }}>{stat.label}</div>
+                      <div style={{ fontWeight: 700, fontSize: "0.8125rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{stat.value}</div>
+                      <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)", whiteSpace: "nowrap" }}>{stat.label}</div>
                     </div>
                   ))}
                 </div>
