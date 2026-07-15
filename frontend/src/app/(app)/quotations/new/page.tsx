@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickCustomerModal } from "@/components/ui/quick-customer-modal";
 
 interface QuotationForm {
   customerId: string;
@@ -25,6 +26,8 @@ interface QuotationForm {
     size: string;
     quantity: number;
     unitPrice: number;
+    wholesalePrice?: number;
+    retailPrice?: number;
     gstPercent: number;
     discount: number;
     variants?: { id: string; color: string; size: string }[];
@@ -38,6 +41,7 @@ export default function NewQuotationPage() {
   const [productSearch, setProductSearch] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedProductSearch(val as string), 300), []
@@ -64,6 +68,25 @@ export default function NewQuotationPage() {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
   const watchItems = watch("items");
   const watchDiscount = watch("discountAmount") || 0;
+  const selectedCustomerId = watch("customerId");
+
+  // Determine if selected customer is RETAIL or WHOLESALE
+  const selectedCustomerObj = customers?.data?.find((c: any) => c.id === selectedCustomerId);
+  const isRetailCustomer = selectedCustomerObj?.type === "RETAIL";
+
+  // Dynamic pricing updates when customer changes
+  useEffect(() => {
+    if (watchItems && watchItems.length > 0) {
+      watchItems.forEach((item, index) => {
+        const targetPrice = isRetailCustomer
+          ? (item.retailPrice ?? item.wholesalePrice ?? item.unitPrice)
+          : (item.wholesalePrice ?? item.unitPrice);
+        if (targetPrice !== undefined && Number(targetPrice) !== Number(item.unitPrice)) {
+          setValue(`items.${index}.unitPrice`, Number(targetPrice));
+        }
+      });
+    }
+  }, [isRetailCustomer, selectedCustomerId, setValue]);
 
   const subtotal = watchItems.reduce((sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0) * (1 - (item.discount || 0) / 100), 0);
   const taxAmount = watchItems.reduce((sum, item) => {
@@ -92,11 +115,28 @@ export default function NewQuotationPage() {
   });
 
   const addProduct = (product: {
-    id: string; name: string; sku: string; wholesalePrice: number; gstPercent: number;
+    id: string; name: string; sku: string; wholesalePrice: number; retailPrice?: number; gstPercent: number;
     variants: { id: string; color: string; size: string }[];
   }) => {
     const variant = product.variants[0];
-    append({ productId: product.id, variantId: variant?.id || "", productName: product.name, color: variant?.color || "", size: variant?.size || "", quantity: 1, unitPrice: product.wholesalePrice, gstPercent: product.gstPercent, discount: 0, variants: product.variants });
+    const resolvedPrice = isRetailCustomer
+      ? (product.retailPrice || product.wholesalePrice)
+      : product.wholesalePrice;
+
+    append({
+      productId: product.id,
+      variantId: variant?.id || "",
+      productName: product.name,
+      color: variant?.color || "",
+      size: variant?.size || "",
+      quantity: 1,
+      unitPrice: resolvedPrice,
+      wholesalePrice: product.wholesalePrice,
+      retailPrice: product.retailPrice || product.wholesalePrice,
+      gstPercent: product.gstPercent,
+      discount: 0,
+      variants: product.variants
+    });
     setProductSearch(""); setShowProductSearch(false);
   };
 
@@ -117,7 +157,16 @@ export default function NewQuotationPage() {
               <div className="card-header"><span style={{ fontWeight: 600 }}>Customer</span></div>
               <div className="card-body">
                 <div className="form-group">
-                  <label className="form-label">Select Customer *</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Select Customer *</label>
+                    <button
+                      type="button"
+                      style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--brand-600)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                      onClick={() => setShowQuickCustomerModal(true)}
+                    >
+                      <Plus size={12} /> Quick Add
+                    </button>
+                  </div>
                   <Controller
                     control={control}
                     name="customerId"
@@ -125,10 +174,10 @@ export default function NewQuotationPage() {
                     render={({ field }) => (
                       <SearchableSelect
                         options={
-                          customers?.data?.map((c: { id: string; shopName: string; ownerName: string }) => ({
+                          customers?.data?.map((c: { id: string; shopName?: string; ownerName: string; type?: string }) => ({
                             value: c.id,
-                            label: c.shopName,
-                            sublabel: c.ownerName,
+                            label: c.shopName || c.ownerName,
+                            sublabel: c.shopName ? c.ownerName : "Retail Customer",
                           })) || []
                         }
                         value={field.value}
@@ -168,14 +217,26 @@ export default function NewQuotationPage() {
                     </div>
                     {productResults?.data?.length > 0 && (
                       <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: "var(--bg-secondary)", border: "1px solid var(--border-color)", borderRadius: "0.625rem", boxShadow: "var(--shadow-lg)", zIndex: 20, overflow: "hidden" }}>
-                        {productResults.data.map((product: { id: string; name: string; sku: string; wholesalePrice: number; gstPercent: number; category: { name: string }; variants: { id: string; color: string; size: string }[] }) => (
+                        {productResults.data.map((product: { id: string; name: string; sku: string; wholesalePrice: number; retailPrice?: number; gstPercent: number; category: { name: string }; variants: { id: string; color: string; size: string }[] }) => (
                           <button key={product.id} type="button" onClick={() => addProduct(product)}
                             style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", background: "none", border: "none", borderBottom: "1px solid var(--border-color)", cursor: "pointer", textAlign: "left" }}>
                             <div>
                               <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{product.name}</div>
                               <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{product.sku} · {product.category.name}</div>
                             </div>
-                            <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>{formatCurrency(product.wholesalePrice)}</div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>
+                                {isRetailCustomer
+                                  ? formatCurrency(product.retailPrice || product.wholesalePrice)
+                                  : formatCurrency(product.wholesalePrice)
+                                }
+                              </div>
+                              {isRetailCustomer && !product.retailPrice && (
+                                <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)", fontWeight: 400 }}>
+                                  Wholesale price fallback
+                                </div>
+                              )}
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -291,6 +352,13 @@ export default function NewQuotationPage() {
           }
         }
       `}</style>
+      <QuickCustomerModal
+        open={showQuickCustomerModal}
+        onOpenChange={setShowQuickCustomerModal}
+        onSuccess={(customer) => {
+          setValue("customerId", customer.id);
+        }}
+      />
     </div>
   );
 }

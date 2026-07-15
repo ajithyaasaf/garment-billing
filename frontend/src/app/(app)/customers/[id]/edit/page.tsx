@@ -12,17 +12,18 @@ import Link from "next/link";
 import { getStateFromGst } from "@/lib/gst";
 
 interface CustomerForm {
-  shopName: string;
+  type: "WHOLESALE" | "RETAIL";
+  shopName?: string;
   ownerName: string;
   whatsapp: string;
-  email: string;
-  gstNumber: string;
-  address: string;
-  city: string;
+  email?: string;
+  gstNumber?: string;
+  address?: string;
+  city?: string;
   state: string;
-  pincode: string;
+  pincode?: string;
   creditLimit: number;
-  paymentTerms: string;
+  paymentTerms?: string;
 }
 
 export default function EditCustomerPage() {
@@ -42,10 +43,11 @@ export default function EditCustomerPage() {
     watch,
     formState: { errors },
   } = useForm<CustomerForm>({
-    defaultValues: { state: "Tamil Nadu", creditLimit: 0, paymentTerms: "30 days" },
+    defaultValues: { type: "WHOLESALE", state: "Tamil Nadu", creditLimit: 0, paymentTerms: "30 days" },
   });
 
   const gstNumber = watch("gstNumber");
+  const customerType = watch("type");
 
   useEffect(() => {
     if (gstNumber) {
@@ -58,7 +60,8 @@ export default function EditCustomerPage() {
 
   useEffect(() => {
     if (customer) {
-      setValue("shopName", customer.shopName);
+      setValue("type", customer.type || "WHOLESALE");
+      setValue("shopName", customer.shopName || "");
       setValue("ownerName", customer.ownerName);
       setValue("whatsapp", customer.whatsapp);
       setValue("email", customer.email || "");
@@ -106,18 +109,62 @@ export default function EditCustomerPage() {
 
       <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="card">
-          <div className="card-header"><span style={{ fontWeight: 600 }}>Shop Information</span></div>
+          <div className="card-header"><span style={{ fontWeight: 600 }}>Customer Information</span></div>
           <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            {/* Customer Type Toggle */}
+            <div className="form-group" style={{ gridColumn: "1 / -1", marginBottom: "0.25rem" }}>
+              <label className="form-label">Customer Type *</label>
+              <div style={{ display: "flex", gap: "0.25rem", background: "var(--bg-tertiary)", padding: "4px", borderRadius: "0.5rem", border: "1px solid var(--border-color)", maxWidth: "320px" }}>
+                <button
+                  type="button"
+                  onClick={() => setValue("type", "WHOLESALE")}
+                  style={{
+                    flex: 1,
+                    padding: "6px 12px",
+                    borderRadius: "0.375rem",
+                    border: "none",
+                    background: customerType === "WHOLESALE" ? "var(--brand-600)" : "transparent",
+                    color: customerType === "WHOLESALE" ? "white" : "var(--text-secondary)",
+                    fontWeight: 600,
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Wholesale
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValue("type", "RETAIL")}
+                  style={{
+                    flex: 1,
+                    padding: "6px 12px",
+                    borderRadius: "0.375rem",
+                    border: "none",
+                    background: customerType === "RETAIL" ? "var(--brand-600)" : "transparent",
+                    color: customerType === "RETAIL" ? "white" : "var(--text-secondary)",
+                    fontWeight: 600,
+                    fontSize: "0.8125rem",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Retail
+                </button>
+              </div>
+            </div>
+
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label className="form-label">Shop Name *</label>
-              <input className={`form-input ${errors.shopName ? "error" : ""}`} placeholder="e.g. Murugan Dress House"
-                {...register("shopName", { required: "Shop name is required" })} />
+              <label className="form-label">Shop Name {customerType === "WHOLESALE" ? "*" : "(optional)"}</label>
+              <input className={`form-input ${errors.shopName ? "error" : ""}`} placeholder={customerType === "WHOLESALE" ? "e.g. Murugan Dress House" : "Shop / Company Name (Optional)"}
+                {...register("shopName", { required: customerType === "WHOLESALE" ? "Shop name is required for wholesale customers" : false })} />
               {errors.shopName && <span className="form-error">{errors.shopName.message}</span>}
             </div>
             <div className="form-group">
-              <label className="form-label">Owner Name *</label>
-              <input className={`form-input ${errors.ownerName ? "error" : ""}`} placeholder="Owner full name"
-                {...register("ownerName", { required: "Owner name is required" })} />
+              <label className="form-label">{customerType === "WHOLESALE" ? "Owner Name *" : "Customer Name *"}</label>
+              <input className={`form-input ${errors.ownerName ? "error" : ""}`} placeholder={customerType === "WHOLESALE" ? "Owner full name" : "Customer full name"}
+                {...register("ownerName", { required: "Customer name is required" })} />
               {errors.ownerName && <span className="form-error">{errors.ownerName.message}</span>}
             </div>
             <div className="form-group">

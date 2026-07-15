@@ -47,7 +47,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
         totalAmount: true,
         paymentStatus: true,
         invoiceDate: true,
-        customer: { select: { shopName: true } },
+        customer: { select: { shopName: true, ownerName: true } },
       },
     }),
     // Recent quotations
@@ -61,7 +61,7 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
         totalAmount: true,
         status: true,
         createdAt: true,
-        customer: { select: { shopName: true } },
+        customer: { select: { shopName: true, ownerName: true } },
       },
     }),
     // Outstanding payments

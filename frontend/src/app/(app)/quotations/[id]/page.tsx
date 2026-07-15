@@ -158,11 +158,13 @@ export default function QuotationDetailPage() {
             <p style={{ fontSize: "0.6875rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>Customer Details</p>
             <p style={{ fontWeight: 700, fontSize: "0.9375rem" }}>
               <Link href={`/customers/${quotation.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors no-print">
-                {quotation.customer.shopName}
+                {quotation.customer.shopName || quotation.customer.ownerName}
               </Link>
-              <span className="only-print">{quotation.customer.shopName}</span>
+              <span className="only-print">{quotation.customer.shopName || quotation.customer.ownerName}</span>
             </p>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", marginTop: "0.25rem" }}>Prop: {quotation.customer.ownerName}</p>
+            {quotation.customer.shopName && (
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", marginTop: "0.25rem" }}>Prop: {quotation.customer.ownerName}</p>
+            )}
             <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>GSTIN: {quotation.customer.gstNumber || "N/A"}</p>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{quotation.customer.city}, {quotation.customer.state || "Tamil Nadu"}</p>
           </div>

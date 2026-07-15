@@ -26,7 +26,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       where,
       skip,
       take,
-      orderBy: { shopName: 'asc' },
+      orderBy: [
+        { shopName: 'asc' },
+        { ownerName: 'asc' }
+      ],
       include: {
         _count: { select: { invoices: true, quotations: true } },
       },
@@ -74,6 +77,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       req.body.state = derivedState;
     }
   }
+  // Normalize empty strings to null for optional database fields
+  if (req.body.shopName === '') req.body.shopName = null;
+  if (req.body.gstNumber === '') req.body.gstNumber = null;
+  if (req.body.email === '') req.body.email = null;
+
   const customer = await prisma.customer.create({ data: req.body });
   res.status(201).json(customer);
 });
@@ -85,6 +93,11 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       req.body.state = derivedState;
     }
   }
+  // Normalize empty strings to null for optional database fields
+  if (req.body.shopName === '') req.body.shopName = null;
+  if (req.body.gstNumber === '') req.body.gstNumber = null;
+  if (req.body.email === '') req.body.email = null;
+
   const customer = await prisma.customer.update({
     where: { id: req.params.id },
     data: req.body,

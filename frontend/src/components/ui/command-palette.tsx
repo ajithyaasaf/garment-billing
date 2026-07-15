@@ -10,9 +10,9 @@ import Link from "next/link";
 
 interface SearchResults {
   products: { id: string; name: string; sku: string; wholesalePrice: number; category: { name: string } }[];
-  customers: { id: string; shopName: string; ownerName: string; whatsapp: string; city: string }[];
-  quotations: { id: string; quotationNumber: string; totalAmount: number; status: string; customer: { shopName: string } }[];
-  invoices: { id: string; invoiceNumber: string; totalAmount: number; paymentStatus: string; customer: { shopName: string } }[];
+  customers: { id: string; shopName?: string; ownerName: string; whatsapp: string; city: string }[];
+  quotations: { id: string; quotationNumber: string; totalAmount: number; status: string; customer: { shopName?: string; ownerName?: string } }[];
+  invoices: { id: string; invoiceNumber: string; totalAmount: number; paymentStatus: string; customer: { shopName?: string; ownerName?: string } }[];
 }
 
 interface CommandPaletteProps {
@@ -191,8 +191,8 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                   {results.customers.map((c) => (
                     <Link key={c.id} href={`/customers/${c.id}`} onClick={onClose} className="result-item">
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{c.shopName}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{c.ownerName} · {c.city}</div>
+                        <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{c.shopName || c.ownerName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{c.shopName ? c.ownerName : "Retail Customer"} · {c.city}</div>
                       </div>
                       <ArrowRight size={14} color="var(--text-tertiary)" />
                     </Link>
@@ -207,7 +207,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                     <Link key={inv.id} href={`/invoices/${inv.id}`} onClick={onClose} className="result-item">
                       <div>
                         <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{inv.invoiceNumber}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{inv.customer.shopName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{inv.customer.shopName || inv.customer.ownerName}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>{formatCurrency(inv.totalAmount)}</span>
@@ -225,7 +225,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
                     <Link key={q.id} href={`/quotations/${q.id}`} onClick={onClose} className="result-item">
                       <div>
                         <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{q.quotationNumber}</div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{q.customer.shopName}</div>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>{q.customer.shopName || q.customer.ownerName}</div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                         <span style={{ fontWeight: 700, fontSize: "0.875rem" }}>{formatCurrency(q.totalAmount)}</span>

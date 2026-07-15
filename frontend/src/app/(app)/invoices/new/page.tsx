@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickCustomerModal } from "@/components/ui/quick-customer-modal";
 
 interface InvoiceForm {
   customerId: string;
@@ -28,6 +29,8 @@ interface InvoiceForm {
     sku: string;
     quantity: number;
     unitPrice: number;
+    wholesalePrice?: number;
+    retailPrice?: number;
     gstPercent: number;
     discount: number;
     variants?: { id: string; color: string; size: string; stock: number }[];
@@ -42,6 +45,7 @@ export default function NewInvoicePage() {
   const [productSearch, setProductSearch] = useState("");
   const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedProductSearch(val as string), 300), []
@@ -82,6 +86,25 @@ export default function NewInvoicePage() {
   const watchItems = watch("items");
   const watchDiscount = watch("discountAmount") || 0;
   const watchPaid = watch("paidAmount") || 0;
+  const selectedCustomerId = watch("customerId");
+
+  // Determine if selected customer is RETAIL or WHOLESALE
+  const selectedCustomerObj = customers?.data?.find((c: any) => c.id === selectedCustomerId);
+  const isRetailCustomer = selectedCustomerObj?.type === "RETAIL";
+
+  // Dynamic pricing updates when customer changes
+  useEffect(() => {
+    if (watchItems && watchItems.length > 0) {
+      watchItems.forEach((item, index) => {
+        const targetPrice = isRetailCustomer
+          ? (item.retailPrice ?? item.wholesalePrice ?? item.unitPrice)
+          : (item.wholesalePrice ?? item.unitPrice);
+        if (targetPrice !== undefined && Number(targetPrice) !== Number(item.unitPrice)) {
+          setValue(`items.${index}.unitPrice`, Number(targetPrice));
+        }
+      });
+    }
+  }, [isRetailCustomer, selectedCustomerId, setValue]);
 
   // Calculations
   const subtotal = watchItems.reduce((sum, item) => {
@@ -127,10 +150,15 @@ export default function NewInvoicePage() {
     name: string;
     sku: string;
     wholesalePrice: number;
+    retailPrice?: number;
     gstPercent: number;
     variants: { id: string; color: string; size: string; stock: number }[];
   }) => {
     const variant = product.variants[0];
+    const resolvedPrice = isRetailCustomer
+      ? (product.retailPrice || product.wholesalePrice)
+      : product.wholesalePrice;
+
     append({
       productId: product.id,
       variantId: variant?.id || "",
@@ -139,7 +167,9 @@ export default function NewInvoicePage() {
       size: variant?.size || "",
       sku: product.sku,
       quantity: 1,
-      unitPrice: product.wholesalePrice,
+      unitPrice: resolvedPrice,
+      wholesalePrice: product.wholesalePrice,
+      retailPrice: product.retailPrice || product.wholesalePrice,
       gstPercent: product.gstPercent,
       discount: 0,
       variants: product.variants,
@@ -172,7 +202,16 @@ export default function NewInvoicePage() {
               </div>
               <div className="card-body">
                 <div className="form-group">
-                  <label className="form-label">Select Customer *</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.25rem" }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Select Customer *</label>
+                    <button
+                      type="button"
+                      style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--brand-600)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                      onClick={() => setShowQuickCustomerModal(true)}
+                    >
+                      <Plus size={12} /> Quick Add
+                    </button>
+                  </div>
                   <Controller
                     control={control}
                     name="customerId"
@@ -180,10 +219,10 @@ export default function NewInvoicePage() {
                     render={({ field }) => (
                       <SearchableSelect
                         options={
-                          customers?.data?.map((c: { id: string; shopName: string; ownerName: string }) => ({
+                          customers?.data?.map((c: { id: string; shopName?: string; ownerName: string; type?: string }) => ({
                             value: c.id,
-                            label: c.shopName,
-                            sublabel: c.ownerName,
+                            label: c.shopName || c.ownerName,
+                            sublabel: c.shopName ? c.ownerName : "Retail Customer",
                           })) || []
                         }
                         value={field.value}
@@ -254,6 +293,7 @@ export default function NewInvoicePage() {
                           name: string;
                           sku: string;
                           wholesalePrice: number;
+                          retailPrice?: number;
                           gstPercent: number;
                           category: { name: string };
                           variants: { id: string; color: string; size: string; stock: number }[];
@@ -284,8 +324,18 @@ export default function NewInvoicePage() {
                                 {product.sku} · {product.category.name} · {product.variants.length} variants
                               </div>
                             </div>
-                            <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>
-                              {formatCurrency(product.wholesalePrice)}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>
+                                {isRetailCustomer
+                                  ? formatCurrency(product.retailPrice || product.wholesalePrice)
+                                  : formatCurrency(product.wholesalePrice)
+                                }
+                              </div>
+                              {isRetailCustomer && !product.retailPrice && (
+                                <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)", fontWeight: 400 }}>
+                                  Wholesale price fallback
+                                </div>
+                              )}
                             </div>
                           </button>
                         ))}
@@ -499,6 +549,13 @@ export default function NewInvoicePage() {
       </form>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <QuickCustomerModal
+        open={showQuickCustomerModal}
+        onOpenChange={setShowQuickCustomerModal}
+        onSuccess={(customer) => {
+          setValue("customerId", customer.id);
+        }}
+      />
     </div>
   );
 }

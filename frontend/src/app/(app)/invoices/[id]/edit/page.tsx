@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickCustomerModal } from "@/components/ui/quick-customer-modal";
 
 interface InvoiceItemForm {
   productId: string;
@@ -20,6 +21,8 @@ interface InvoiceItemForm {
   sku: string;
   quantity: number;
   unitPrice: number;
+  wholesalePrice?: number;
+  retailPrice?: number;
   gstPercent: number;
   discount: number;
   variants?: { id: string; color: string; size: string; stock: number }[];
@@ -43,6 +46,7 @@ export default function EditInvoicePage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [formReady, setFormReady] = useState(false);
+  const [showQuickCustomerModal, setShowQuickCustomerModal] = useState(false);
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => setDebouncedSearch(val as string), 300),
@@ -95,8 +99,13 @@ export default function EditInvoicePage() {
   const watchItems = watch("items");
   const watchDiscount = watch("discountAmount") || 0;
   const watchPaid = watch("paidAmount") || 0;
+  const selectedCustomerId = watch("customerId");
 
   const multiplePayments = invoice?.payments?.length > 1;
+
+  // Determine if selected customer is RETAIL or WHOLESALE
+  const selectedCustomerObj = customers?.data?.find((c: any) => c.id === selectedCustomerId);
+  const isRetailCustomer = selectedCustomerObj?.type === "RETAIL";
 
   // Pre-populate form once invoice loads
   useEffect(() => {
@@ -118,6 +127,8 @@ export default function EditInvoicePage() {
               sku: item.sku || "",
               quantity: item.quantity,
               unitPrice: item.unitPrice,
+              wholesalePrice: matched?.wholesalePrice || item.unitPrice,
+              retailPrice: matched?.retailPrice || matched?.wholesalePrice || item.unitPrice,
               gstPercent: item.gstPercent,
               discount: item.discount || 0,
               variants: matched?.variants || [],
@@ -132,6 +143,8 @@ export default function EditInvoicePage() {
               sku: item.sku || "",
               quantity: item.quantity,
               unitPrice: item.unitPrice,
+              wholesalePrice: item.unitPrice,
+              retailPrice: item.unitPrice,
               gstPercent: item.gstPercent,
               discount: item.discount || 0,
               variants: [],
@@ -156,6 +169,20 @@ export default function EditInvoicePage() {
 
     seedItems();
   }, [invoice, formReady, reset]);
+
+  // Dynamic pricing updates when customer changes
+  useEffect(() => {
+    if (formReady && watchItems && watchItems.length > 0) {
+      watchItems.forEach((item, index) => {
+        const targetPrice = isRetailCustomer
+          ? (item.retailPrice ?? item.wholesalePrice ?? item.unitPrice)
+          : (item.wholesalePrice ?? item.unitPrice);
+        if (targetPrice !== undefined && Number(targetPrice) !== Number(item.unitPrice)) {
+          setValue(`items.${index}.unitPrice`, Number(targetPrice));
+        }
+      });
+    }
+  }, [isRetailCustomer, selectedCustomerId, setValue, formReady]);
 
   // Live totals
   const subtotal = watchItems.reduce((sum, item) => {
@@ -198,6 +225,10 @@ export default function EditInvoicePage() {
 
   const addProduct = (product: any) => {
     const variant = product.variants[0];
+    const resolvedPrice = isRetailCustomer
+      ? (product.retailPrice || product.wholesalePrice)
+      : product.wholesalePrice;
+
     append({
       productId: product.id,
       variantId: variant?.id || "",
@@ -206,7 +237,9 @@ export default function EditInvoicePage() {
       size: variant?.size || "",
       sku: product.sku,
       quantity: 1,
-      unitPrice: product.wholesalePrice,
+      unitPrice: resolvedPrice,
+      wholesalePrice: product.wholesalePrice,
+      retailPrice: product.retailPrice || product.wholesalePrice,
       gstPercent: product.gstPercent,
       discount: 0,
       variants: product.variants,
@@ -303,8 +336,8 @@ export default function EditInvoicePage() {
                         options={
                           customers?.data?.map((c: any) => ({
                             value: c.id,
-                            label: c.shopName,
-                            sublabel: c.ownerName,
+                            label: c.shopName || c.ownerName,
+                            sublabel: c.shopName ? c.ownerName : "Retail Customer",
                           })) || []
                         }
                         value={field.value}
@@ -414,8 +447,18 @@ export default function EditInvoicePage() {
                                 {product.sku} · {product.category?.name} · {product.variants?.length} variants
                               </div>
                             </div>
-                            <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>
-                              {formatCurrency(product.wholesalePrice)}
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontWeight: 700, color: "var(--brand-600)" }}>
+                                {isRetailCustomer
+                                  ? formatCurrency(product.retailPrice || product.wholesalePrice)
+                                  : formatCurrency(product.wholesalePrice)
+                                }
+                              </div>
+                              {isRetailCustomer && !product.retailPrice && (
+                                <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)", fontWeight: 400 }}>
+                                  Wholesale price fallback
+                                </div>
+                              )}
                             </div>
                           </button>
                         ))}

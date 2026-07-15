@@ -26,7 +26,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             ],
           },
           take: 5,
-          select: { id: true, name: true, sku: true, wholesalePrice: true, category: { select: { name: true } } },
+          select: { id: true, name: true, sku: true, wholesalePrice: true, retailPrice: true, category: { select: { name: true } } },
         })
       : [],
     type === 'all' || type === 'customers'
@@ -49,10 +49,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             OR: [
               { quotationNumber: { contains: query, mode: 'insensitive' } },
               { customer: { shopName: { contains: query, mode: 'insensitive' } } },
+              { customer: { ownerName: { contains: query, mode: 'insensitive' } } },
             ],
           },
           take: 5,
-          select: { id: true, quotationNumber: true, totalAmount: true, status: true, customer: { select: { shopName: true } } },
+          select: { id: true, quotationNumber: true, totalAmount: true, status: true, customer: { select: { shopName: true, ownerName: true } } },
         })
       : [],
     type === 'all' || type === 'invoices'
@@ -61,10 +62,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             OR: [
               { invoiceNumber: { contains: query, mode: 'insensitive' } },
               { customer: { shopName: { contains: query, mode: 'insensitive' } } },
+              { customer: { ownerName: { contains: query, mode: 'insensitive' } } },
             ],
           },
           take: 5,
-          select: { id: true, invoiceNumber: true, totalAmount: true, paymentStatus: true, customer: { select: { shopName: true } } },
+          select: { id: true, invoiceNumber: true, totalAmount: true, paymentStatus: true, customer: { select: { shopName: true, ownerName: true } } },
         })
       : [],
   ]);

@@ -16,7 +16,7 @@ interface Order {
   status: string;
   totalAmount: number;
   createdAt: string;
-  customer: { shopName: string };
+  customer: { shopName?: string; ownerName?: string };
   createdBy: { name: string };
   _count: { items: number };
 }
@@ -93,7 +93,7 @@ export default function OrdersPage() {
                   </td>
                   <td style={{ fontWeight: 500 }}>
                     <Link href={`/customers/${order.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
-                      {order.customer.shopName}
+                      {order.customer.shopName || order.customer.ownerName}
                     </Link>
                   </td>
                   <td style={{ color: "var(--text-secondary)" }}>{order._count.items} items</td>

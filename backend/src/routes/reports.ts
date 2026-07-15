@@ -83,14 +83,14 @@ router.get('/customer-sales', async (req: AuthRequest, res: Response) => {
   const customerIds = customers.map((c) => c.customerId);
   const customerDetails = await prisma.customer.findMany({
     where: { id: { in: customerIds } },
-    select: { id: true, shopName: true, city: true },
+    select: { id: true, shopName: true, ownerName: true, city: true },
   });
 
   const result = customers.map((c) => {
     const detail = customerDetails.find((d) => d.id === c.customerId);
     return {
       ...c,
-      shopName: detail?.shopName,
+      shopName: detail?.shopName || detail?.ownerName,
       city: detail?.city,
     };
   });
@@ -116,7 +116,7 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
   const invoices = await prisma.invoice.findMany({
     where: { invoiceDate: { gte: startDate, lt: endDate } },
     include: {
-      customer: { select: { shopName: true, gstNumber: true, state: true } },
+      customer: { select: { shopName: true, ownerName: true, gstNumber: true, state: true } },
       items: { select: { gstPercent: true, gstAmount: true, totalAmount: true, quantity: true } },
     },
     orderBy: { invoiceDate: 'asc' },
@@ -176,7 +176,7 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
       return {
         invoiceNumber: inv.invoiceNumber,
         invoiceDate: inv.invoiceDate,
-        customer: inv.customer.shopName,
+        customer: inv.customer.shopName || inv.customer.ownerName,
         gstNumber: inv.customer.gstNumber,
         state: inv.customer.state,
         taxableAmount: Math.round(invTaxable * 100) / 100,
@@ -195,7 +195,7 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
 router.get('/outstanding', async (_req, res: Response) => {
   const outstanding = await prisma.invoice.findMany({
     where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
-    include: { customer: { select: { shopName: true, whatsapp: true, city: true } } },
+    include: { customer: { select: { shopName: true, ownerName: true, whatsapp: true, city: true } } },
     orderBy: { dueAmount: 'desc' },
   });
 

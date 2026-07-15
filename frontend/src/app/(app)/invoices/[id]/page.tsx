@@ -196,12 +196,12 @@ export default function InvoiceDetailPage() {
                   <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", textTransform: "uppercase", fontWeight: 600 }}>Bill To</span>
                   <div style={{ fontWeight: 700, fontSize: "1.05rem", marginTop: "0.25rem" }}>
                     <Link href={`/customers/${invoice.customerId}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors no-print">
-                      {invoice.customer.shopName}
+                      {invoice.customer.shopName || invoice.customer.ownerName}
                     </Link>
-                    <span className="only-print" style={{ color: "var(--brand-600)" }}>{invoice.customer.shopName}</span>
+                    <span className="only-print" style={{ color: "var(--brand-600)" }}>{invoice.customer.shopName || invoice.customer.ownerName}</span>
                   </div>
                   <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                    Owner: {invoice.customer.ownerName}<br />
+                    {invoice.customer.shopName && <>Owner: {invoice.customer.ownerName}<br /></>}
                     {invoice.customer.address && `${invoice.customer.address}, `}
                     {invoice.customer.city && `${invoice.customer.city}, `}
                     {invoice.customer.state || "Tamil Nadu"}

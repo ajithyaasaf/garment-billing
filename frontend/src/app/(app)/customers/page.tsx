@@ -139,11 +139,15 @@ export default function CustomersPage() {
                         marginBottom: "0.25rem",
                       }}
                     >
-                      {customer.shopName}
+                      {customer.shopName || customer.ownerName}
                     </Link>
-                    <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
-                      {customer.ownerName}
-                    </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "0.125rem" }}>
+                      {customer.shopName ? (
+                        <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>{customer.ownerName}</span>
+                      ) : (
+                        <span className="badge badge-secondary" style={{ fontSize: "0.6875rem", padding: "1px 5px", background: "rgba(59, 130, 246, 0.1)", color: "var(--brand-600)", border: "none" }}>Retail Customer</span>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.25rem" }}>
                     <Link href={`/customers/${customer.id}`} className="btn btn-ghost btn-sm btn-icon" title="View Profile">

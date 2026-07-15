@@ -17,7 +17,7 @@ interface Quotation {
   status: string;
   createdAt: string;
   convertedToInvoice: boolean;
-  customer: { shopName: string; whatsapp: string };
+  customer: { shopName?: string; ownerName?: string; whatsapp: string };
   createdBy: { name: string };
   _count: { items: number };
 }
@@ -114,7 +114,7 @@ export default function QuotationsPage() {
                   </td>
                   <td style={{ fontWeight: 500 }}>
                     <Link href={`/customers/${q.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
-                      {q.customer.shopName}
+                      {q.customer.shopName || q.customer.ownerName}
                     </Link>
                   </td>
                   <td style={{ color: "var(--text-secondary)" }}>{formatDate(q.createdAt)}</td>

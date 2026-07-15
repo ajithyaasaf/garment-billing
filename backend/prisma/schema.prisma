@@ -53,6 +53,11 @@ enum StockMovementType {
   ADJUSTMENT
 }
 
+enum CustomerType {
+  WHOLESALE
+  RETAIL
+}
+
 // ============================
 // USER / AUTH
 // ============================
@@ -206,21 +211,22 @@ model StockMovement {
 // ============================
 
 model Customer {
-  id           String   @id @default(cuid())
-  shopName     String
+  id           String       @id @default(cuid())
+  shopName     String?
   ownerName    String
   whatsapp     String
   email        String?
   gstNumber    String?
   address      String?
   city         String?
-  state        String   @default("Tamil Nadu")
+  state        String       @default("Tamil Nadu")
   pincode      String?
-  creditLimit  Float    @default(0)
+  creditLimit  Float        @default(0)
   paymentTerms String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive     Boolean      @default(true)
+  type         CustomerType @default(WHOLESALE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   quotations   Quotation[]
   invoices     Invoice[]

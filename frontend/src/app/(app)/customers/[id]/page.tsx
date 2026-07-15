@@ -72,8 +72,16 @@ export default function CustomerDetailPage() {
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 style={{ fontSize: "1.25rem", fontWeight: 700 }}>{customer.shopName}</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>Proprietor: {customer.ownerName}</p>
+            <h1 style={{ fontSize: "1.25rem", fontWeight: 700 }}>{customer.shopName || customer.ownerName}</h1>
+            {customer.shopName ? (
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>Proprietor: {customer.ownerName}</p>
+            ) : (
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>
+                <span className="badge badge-secondary" style={{ fontSize: "0.7rem", padding: "1px 5px", background: "rgba(59, 130, 246, 0.1)", color: "var(--brand-600)", border: "none" }}>
+                  Retail Customer
+                </span>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
@@ -267,10 +275,12 @@ export default function CustomerDetailPage() {
               <span style={{ fontWeight: 600 }}>Customer Details</span>
             </div>
             <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", fontSize: "0.8125rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-secondary)" }}>Owner:</span>
-                <span style={{ fontWeight: 600 }}>{customer.ownerName}</span>
-              </div>
+              {customer.shopName && (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--text-secondary)" }}>Owner:</span>
+                  <span style={{ fontWeight: 600 }}>{customer.ownerName}</span>
+                </div>
+              )}
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-secondary)" }}>WhatsApp:</span>
                 <span style={{ fontWeight: 600 }}>{customer.whatsapp}</span>

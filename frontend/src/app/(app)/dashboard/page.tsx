@@ -58,7 +58,7 @@ interface DashboardData {
     totalAmount: number;
     paymentStatus: string;
     invoiceDate: string;
-    customer: { shopName: string };
+    customer: { shopName?: string; ownerName?: string };
   }[];
   recentQuotations: {
     id: string;
@@ -67,7 +67,7 @@ interface DashboardData {
     totalAmount: number;
     status: string;
     createdAt: string;
-    customer: { shopName: string };
+    customer: { shopName?: string; ownerName?: string };
   }[];
   outstandingPayments: { total: number; count: number };
   totalCustomers: number;
@@ -378,7 +378,7 @@ export default function DashboardPage() {
                           href={`/customers/${inv.customerId}`}
                           className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors"
                         >
-                          {inv.customer.shopName}
+                          {inv.customer.shopName || inv.customer.ownerName}
                         </Link>
                       </td>
                       <td style={{ fontWeight: 600 }}>{formatCurrency(inv.totalAmount)}</td>

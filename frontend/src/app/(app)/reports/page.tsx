@@ -242,7 +242,7 @@ export default function ReportsPage() {
       colWidths = [{ wch: 18 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
       rows = (outstanding.invoices || []).map((inv: any) => [
         inv.invoiceNumber,
-        inv.customer.shopName,
+        inv.customer.shopName || inv.customer.ownerName,
         inv.customer.city,
         Number(inv.totalAmount.toFixed(2)),
         Number(inv.dueAmount.toFixed(2)),
@@ -597,10 +597,10 @@ export default function ReportsPage() {
                     <tr><th>Invoice #</th><th>Customer</th><th>City</th><th>Total</th><th>Due</th><th>Status</th></tr>
                   </thead>
                   <tbody>
-                    {outstanding.invoices?.map((inv: { id: string; invoiceNumber: string; customer: { shopName: string; whatsapp: string; city: string }; totalAmount: number; dueAmount: number; paymentStatus: string }) => (
+                    {outstanding.invoices?.map((inv: { id: string; invoiceNumber: string; customer: { shopName?: string; ownerName?: string; whatsapp: string; city: string }; totalAmount: number; dueAmount: number; paymentStatus: string }) => (
                       <tr key={inv.id}>
                         <td><a href={`/invoices/${inv.id}`} style={{ color: "var(--brand-600)", textDecoration: "none", fontWeight: 600 }}>{inv.invoiceNumber}</a></td>
-                        <td style={{ fontWeight: 500 }}>{inv.customer.shopName}</td>
+                        <td style={{ fontWeight: 500 }}>{inv.customer.shopName || inv.customer.ownerName}</td>
                         <td style={{ color: "var(--text-secondary)" }}>{inv.customer.city}</td>
                         <td>{formatCurrency(inv.totalAmount)}</td>
                         <td style={{ fontWeight: 700, color: "var(--danger)" }}>{formatCurrency(inv.dueAmount)}</td>

@@ -18,7 +18,7 @@ interface Invoice {
   paymentStatus: string;
   paymentMethod: string;
   invoiceDate: string;
-  customer: { shopName: string; whatsapp: string };
+  customer: { shopName?: string; ownerName?: string; whatsapp: string };
   _count: { items: number };
 }
 
@@ -117,7 +117,7 @@ export default function InvoicesPage() {
                     </td>
                     <td style={{ fontWeight: 500 }}>
                       <Link href={`/customers/${inv.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
-                        {inv.customer.shopName}
+                        {inv.customer.shopName || inv.customer.ownerName}
                       </Link>
                     </td>
                     <td style={{ color: "var(--text-secondary)" }}>{formatDate(inv.invoiceDate)}</td>

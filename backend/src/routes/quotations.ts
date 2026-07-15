@@ -23,6 +23,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     where.OR = [
       { quotationNumber: { contains: search as string, mode: 'insensitive' } },
       { customer: { shopName: { contains: search as string, mode: 'insensitive' } } },
+      { customer: { ownerName: { contains: search as string, mode: 'insensitive' } } },
     ];
   }
   if (status) where.status = status;
@@ -34,7 +35,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       skip,
       take,
       include: {
-        customer: { select: { shopName: true, whatsapp: true } },
+        customer: { select: { shopName: true, ownerName: true, whatsapp: true } },
         createdBy: { select: { name: true } },
         _count: { select: { items: true } },
       },
