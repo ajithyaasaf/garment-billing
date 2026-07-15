@@ -147,6 +147,32 @@ router.post('/:id/convert', async (req: AuthRequest, res: Response) => {
     },
   });
 
+  // Update stock for each variant and log stock movements
+  for (const item of order.items) {
+    if (item.variantId) {
+      const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
+      if (variant) {
+        await prisma.productVariant.update({
+          where: { id: item.variantId },
+          data: { stock: Math.max(0, variant.stock - item.quantity) },
+        });
+        await prisma.stockMovement.create({
+          data: {
+            productId: item.productId,
+            variantId: item.variantId,
+            type: 'OUTWARD',
+            quantity: -item.quantity,
+            previousStock: variant.stock,
+            newStock: Math.max(0, variant.stock - item.quantity),
+            reason: `Order Conversion (Invoice: ${invoice.invoiceNumber})`,
+            reference: invoice.id,
+            createdBy: req.user?.id,
+          },
+        });
+      }
+    }
+  }
+
   await prisma.order.update({
     where: { id: order.id },
     data: { status: 'COMPLETED' },
