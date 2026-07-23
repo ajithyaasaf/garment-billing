@@ -10,7 +10,9 @@ import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickSupplierModal } from "@/components/ui/quick-supplier-modal";
 import * as Dialog from "@radix-ui/react-dialog";
+
 
 interface PurchaseItemForm {
   productId: string;
@@ -548,109 +550,3 @@ export default function NewPurchasePage() {
   );
 }
 
-// Inline Quick Supplier Modal Component
-function QuickSupplierModal({
-  open,
-  onOpenChange,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: (supplier: { id: string; shopName: string }) => void;
-}) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    defaultValues: { shopName: "", ownerName: "", whatsapp: "", city: "", state: "Tamil Nadu" },
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (data: any) => {
-      return (await api.post("/suppliers", data)).data;
-    },
-    onSuccess: (data) => {
-      toast.success("Supplier added successfully!");
-      onSuccess(data);
-      onOpenChange(false);
-      reset();
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.error || "Failed to add supplier");
-    },
-  });
-
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 50 }} />
-        <Dialog.Content
-          style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border-color)",
-            borderRadius: "0.75rem",
-            padding: "1.5rem",
-            width: "90%",
-            maxWidth: "500px",
-            boxShadow: "var(--shadow-xl)",
-            zIndex: 51,
-          }}
-        >
-          <Dialog.Title style={{ fontSize: "1.125rem", fontWeight: 700, marginBottom: "0.25rem" }}>
-            Quick Add Supplier
-          </Dialog.Title>
-          <Dialog.Description style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "1.25rem" }}>
-            Add a new sourcing partner inline without leaving this purchase bill.
-          </Dialog.Description>
-
-          <form onSubmit={handleSubmit((data) => mutation.mutate(data))} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div className="form-group">
-              <label className="form-label">Shop Name *</label>
-              <input className="form-input" placeholder="e.g. Balaji Textiles" {...register("shopName", { required: "Shop name is required" })} />
-              {errors.shopName && <span className="form-error">{errors.shopName.message}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Owner Name *</label>
-              <input className="form-input" placeholder="e.g. Rajesh Kumar" {...register("ownerName", { required: "Owner name is required" })} />
-              {errors.ownerName && <span className="form-error">{errors.ownerName.message}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">WhatsApp Number *</label>
-              <input className="form-input" placeholder="10 digit number" {...register("whatsapp", { required: "WhatsApp number is required", pattern: { value: /^[0-9]{10}$/, message: "Must be a 10 digit number" } })} />
-              {errors.whatsapp && <span className="form-error">{errors.whatsapp.message}</span>}
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-              <div className="form-group">
-                <label className="form-label">City</label>
-                <input className="form-input" placeholder="e.g. Tiruppur" {...register("city")} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">State</label>
-                <input className="form-input" placeholder="Tamil Nadu" {...register("state")} />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1rem" }}>
-              <Dialog.Close asChild>
-                <button type="button" className="btn btn-secondary btn-sm">Cancel</button>
-              </Dialog.Close>
-              <button type="submit" className="btn btn-primary btn-sm" disabled={mutation.isPending}>
-                {mutation.isPending && <Loader2 size={12} style={{ animation: "spin 1s linear infinite", marginRight: "0.25rem" }} />}
-                Save Supplier
-              </button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
-  );
-}

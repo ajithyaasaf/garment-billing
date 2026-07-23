@@ -33,46 +33,58 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   });
 });
 
+import { getNextSequenceNumber } from '../lib/sequence';
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   const { customerId, items, notes } = req.body;
 
-  let totalAmount = 0;
-  const processedItems = items.map((item: {
-    productId: string;
-    variantId?: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-  }) => {
-    const total = item.quantity * item.unitPrice;
-    totalAmount += total;
-    return { ...item, totalAmount: total };
-  });
+  try {
+    const order = await prisma.$transaction(async (tx) => {
+      let totalAmount = 0;
+      const processedItems = items.map((item: {
+        productId: string;
+        variantId?: string;
+        productName: string;
+        quantity: number;
+        unitPrice: number;
+      }) => {
+        const total = item.quantity * item.unitPrice;
+        totalAmount += total;
+        return { ...item, totalAmount: total };
+      });
 
-  const orderNumber = `ORD-${Date.now().toString().slice(-8)}`;
+      const orderNumber = await getNextSequenceNumber(tx, 'ORD');
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      customerId,
-      createdById: req.user!.id,
-      notes,
-      totalAmount,
-      items: { create: processedItems },
-    },
-    include: { customer: true, items: true },
-  });
+      return tx.order.create({
+        data: {
+          orderNumber,
+          customerId,
+          createdById: req.user!.id,
+          notes,
+          totalAmount,
+          items: { create: processedItems },
+        },
+        include: { customer: true, items: true },
+      });
+    });
 
-  res.status(201).json(order);
+    res.status(201).json(order);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create order' });
+  }
 });
 
 router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
   const { status } = req.body;
-  const order = await prisma.order.update({
-    where: { id: req.params.id },
-    data: { status },
-  });
-  res.json(order);
+  try {
+    const order = await prisma.order.update({
+      where: { id: req.params.id },
+      data: { status },
+    });
+    res.json(order);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update order status' });
+  }
 });
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {
@@ -94,91 +106,101 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 router.post('/:id/convert', async (req: AuthRequest, res: Response) => {
-  const order = await prisma.order.findUnique({
-    where: { id: req.params.id },
-    include: { items: { include: { product: true, variant: true } } },
-  });
-  if (!order) return res.status(404).json({ error: 'Order not found' });
+  try {
+    const invoice = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: req.params.id },
+        include: { items: { include: { product: true, variant: true } } },
+      });
+      if (!order) throw new Error('Order not found');
 
-  const existingInvoice = await prisma.invoice.findFirst({ where: { orderId: order.id } });
-  if (existingInvoice) return res.status(400).json({ error: 'Already converted to invoice' });
+      const existingInvoice = await tx.invoice.findFirst({ where: { orderId: order.id } });
+      if (existingInvoice) throw new Error('Already converted to invoice');
 
-  let subtotal = 0;
-  let taxAmount = 0;
+      let subtotal = 0;
+      let taxAmount = 0;
 
-  const invoiceItems = order.items.map((item) => {
-    const gstPercent = item.product.gstPercent || 5;
-    const itemSubtotal = item.quantity * item.unitPrice;
-    const gst = itemSubtotal * (gstPercent / 100);
-    subtotal += itemSubtotal;
-    taxAmount += gst;
-    
-    return {
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      color: item.variant?.color,
-      size: item.variant?.size,
-      sku: item.product.sku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      gstPercent,
-      gstAmount: gst,
-      totalAmount: itemSubtotal + gst,
-      discount: 0,
-    };
-  });
+      const invoiceItems = order.items.map((item) => {
+        const gstPercent = item.product.gstPercent || 5;
+        const itemSubtotal = item.quantity * item.unitPrice;
+        const gst = itemSubtotal * (gstPercent / 100);
+        subtotal += itemSubtotal;
+        taxAmount += gst;
+        
+        return {
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          color: item.variant?.color,
+          size: item.variant?.size,
+          sku: item.product.sku,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent,
+          gstAmount: gst,
+          totalAmount: itemSubtotal + gst,
+          discount: 0,
+        };
+      });
 
-  const totalAmount = subtotal + taxAmount;
-  const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+      const totalAmount = subtotal + taxAmount;
+      const invoiceNumber = await getNextSequenceNumber(tx, 'INV');
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      invoiceNumber,
-      customerId: order.customerId,
-      createdById: req.user!.id,
-      orderId: order.id,
-      subtotal,
-      taxAmount,
-      totalAmount,
-      dueAmount: totalAmount,
-      notes: order.notes,
-      items: { create: invoiceItems },
-    },
-  });
+      const newInvoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          customerId: order.customerId,
+          createdById: req.user!.id,
+          orderId: order.id,
+          subtotal,
+          taxAmount,
+          totalAmount,
+          dueAmount: totalAmount,
+          notes: order.notes,
+          items: { create: invoiceItems },
+        },
+      });
 
-  // Update stock for each variant and log stock movements
-  for (const item of order.items) {
-    if (item.variantId) {
-      const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
-      if (variant) {
-        await prisma.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: Math.max(0, variant.stock - item.quantity) },
-        });
-        await prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            variantId: item.variantId,
-            type: 'OUTWARD',
-            quantity: -item.quantity,
-            previousStock: variant.stock,
-            newStock: Math.max(0, variant.stock - item.quantity),
-            reason: `Order Conversion (Invoice: ${invoice.invoiceNumber})`,
-            reference: invoice.id,
-            createdBy: req.user?.id,
-          },
-        });
+      // Update stock atomically for each variant and log stock movements
+      for (const item of order.items) {
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+          if (variant) {
+            const newStock = Math.max(0, variant.stock - item.quantity);
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: newStock },
+            });
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                variantId: item.variantId,
+                type: 'OUTWARD',
+                quantity: -item.quantity,
+                previousStock: variant.stock,
+                newStock,
+                reason: `Order Conversion (Invoice: ${newInvoice.invoiceNumber})`,
+                reference: newInvoice.id,
+                createdBy: req.user?.id,
+              },
+            });
+          }
+        }
       }
-    }
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: { status: 'COMPLETED' },
+      });
+
+      return newInvoice;
+    });
+
+    res.status(201).json(invoice);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to convert order' });
   }
-
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { status: 'COMPLETED' },
-  });
-
-  res.status(201).json(invoice);
 });
 
 export default router;
+

@@ -67,67 +67,77 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json(quotation);
 });
 
+import { getNextSequenceNumber } from '../lib/sequence';
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   const { customerId, items, discountAmount, discountPercent, notes, termsConditions, validUntil } = req.body;
 
-  let subtotal = 0;
-  let taxAmount = 0;
+  try {
+    const quotation = await prisma.$transaction(async (tx) => {
+      let subtotal = 0;
+      let taxAmount = 0;
 
-  const processedItems = items.map((item: {
-    productId: string;
-    variantId?: string;
-    productName: string;
-    color?: string;
-    size?: string;
-    quantity: number;
-    unitPrice: number;
-    gstPercent: number;
-    discount?: number;
-  }) => {
-    const itemTotal = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
-    const gst = itemTotal * (item.gstPercent / 100);
-    subtotal += itemTotal;
-    taxAmount += gst;
-    return {
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      color: item.color,
-      size: item.size,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      gstPercent: item.gstPercent,
-      gstAmount: gst,
-      totalAmount: itemTotal + gst,
-      discount: item.discount || 0,
-    };
-  });
+      const processedItems = items.map((item: {
+        productId: string;
+        variantId?: string;
+        productName: string;
+        color?: string;
+        size?: string;
+        quantity: number;
+        unitPrice: number;
+        gstPercent: number;
+        discount?: number;
+      }) => {
+        const itemTotal = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        const gst = itemTotal * (item.gstPercent / 100);
+        subtotal += itemTotal;
+        taxAmount += gst;
+        return {
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent: item.gstPercent,
+          gstAmount: gst,
+          totalAmount: itemTotal + gst,
+          discount: item.discount || 0,
+        };
+      });
 
-  const totalAmount = subtotal + taxAmount - (discountAmount || 0);
+      const totalAmount = subtotal + taxAmount - (discountAmount || 0);
+      const quotationNumber = await getNextSequenceNumber(tx, 'QUO');
 
-  const quotation = await prisma.quotation.create({
-    data: {
-      quotationNumber: generateQuotationNumber(),
-      customerId,
-      createdById: req.user!.id,
-      subtotal,
-      discountAmount: discountAmount || 0,
-      discountPercent: discountPercent || 0,
-      taxAmount,
-      totalAmount,
-      notes,
-      termsConditions,
-      validUntil: validUntil ? new Date(validUntil) : undefined,
-      items: { create: processedItems },
-    },
-    include: {
-      customer: true,
-      items: true,
-    },
-  });
+      return tx.quotation.create({
+        data: {
+          quotationNumber,
+          customerId,
+          createdById: req.user!.id,
+          subtotal,
+          discountAmount: discountAmount || 0,
+          discountPercent: discountPercent || 0,
+          taxAmount,
+          totalAmount,
+          notes,
+          termsConditions,
+          validUntil: validUntil ? new Date(validUntil) : undefined,
+          items: { create: processedItems },
+        },
+        include: {
+          customer: true,
+          items: true,
+        },
+      });
+    });
 
-  res.status(201).json(quotation);
+    res.status(201).json(quotation);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create quotation' });
+  }
 });
+
 
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   const { items, ...data } = req.body;
@@ -140,108 +150,126 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 
 // POST /api/quotations/:id/convert - Convert to invoice
 router.post('/:id/convert', async (req: AuthRequest, res: Response) => {
-  const quotation = await prisma.quotation.findUnique({
-    where: { id: req.params.id },
-    include: { items: true },
-  });
-  if (!quotation) return res.status(404).json({ error: 'Quotation not found' });
-  if (quotation.convertedToInvoice) return res.status(400).json({ error: 'Already converted' });
+  try {
+    const invoice = await prisma.$transaction(async (tx) => {
+      const quotation = await tx.quotation.findUnique({
+        where: { id: req.params.id },
+        include: { items: true },
+      });
+      if (!quotation) throw new Error('Quotation not found');
+      if (quotation.convertedToInvoice) throw new Error('Quotation already converted to invoice');
 
-  const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+      const invoiceNumber = await getNextSequenceNumber(tx, 'INV');
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      invoiceNumber,
-      customerId: quotation.customerId,
-      createdById: req.user!.id,
-      subtotal: quotation.subtotal,
-      discountAmount: quotation.discountAmount,
-      discountPercent: quotation.discountPercent,
-      taxAmount: quotation.taxAmount,
-      totalAmount: quotation.totalAmount,
-      dueAmount: quotation.totalAmount,
-      notes: quotation.notes,
-      termsConditions: quotation.termsConditions,
-      items: {
-        create: quotation.items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          productName: item.productName,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          gstPercent: item.gstPercent,
-          gstAmount: item.gstAmount,
-          totalAmount: item.totalAmount,
-          discount: item.discount,
-        })),
-      },
-    },
-  });
-
-  // Update stock for each variant and log stock movements
-  for (const item of quotation.items) {
-    if (item.variantId) {
-      const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
-      if (variant) {
-        await prisma.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: Math.max(0, variant.stock - item.quantity) },
-        });
-        await prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            variantId: item.variantId,
-            type: 'OUTWARD',
-            quantity: -item.quantity,
-            previousStock: variant.stock,
-            newStock: Math.max(0, variant.stock - item.quantity),
-            reason: `Quotation Conversion (Invoice: ${invoice.invoiceNumber})`,
-            reference: invoice.id,
-            createdBy: req.user?.id,
+      const newInvoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          customerId: quotation.customerId,
+          createdById: req.user!.id,
+          subtotal: quotation.subtotal,
+          discountAmount: quotation.discountAmount,
+          discountPercent: quotation.discountPercent,
+          taxAmount: quotation.taxAmount,
+          totalAmount: quotation.totalAmount,
+          dueAmount: quotation.totalAmount,
+          notes: quotation.notes,
+          termsConditions: quotation.termsConditions,
+          items: {
+            create: quotation.items.map((item) => ({
+              productId: item.productId,
+              variantId: item.variantId,
+              productName: item.productName,
+              color: item.color,
+              size: item.size,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              gstPercent: item.gstPercent,
+              gstAmount: item.gstAmount,
+              totalAmount: item.totalAmount,
+              discount: item.discount,
+            })),
           },
-        });
+        },
+      });
+
+      // Update stock atomically for each variant and log stock movements
+      for (const item of quotation.items) {
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+          if (variant) {
+            const newStock = Math.max(0, variant.stock - item.quantity);
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: newStock },
+            });
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                variantId: item.variantId,
+                type: 'OUTWARD',
+                quantity: -item.quantity,
+                previousStock: variant.stock,
+                newStock,
+                reason: `Quotation Conversion (Invoice: ${newInvoice.invoiceNumber})`,
+                reference: newInvoice.id,
+                createdBy: req.user?.id,
+              },
+            });
+          }
+        }
       }
-    }
+
+      await tx.quotation.update({
+        where: { id: req.params.id },
+        data: { convertedToInvoice: true, invoiceId: newInvoice.id, status: 'CONVERTED' },
+      });
+
+      return newInvoice;
+    });
+
+    res.json(invoice);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to convert quotation' });
   }
-
-  await prisma.quotation.update({
-    where: { id: req.params.id },
-    data: { convertedToInvoice: true, invoiceId: invoice.id, status: 'CONVERTED' },
-  });
-
-  res.json(invoice);
 });
 
 // POST /api/quotations/:id/duplicate
 router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
-  const original = await prisma.quotation.findUnique({
-    where: { id: req.params.id },
-    include: { items: true },
-  });
-  if (!original) return res.status(404).json({ error: 'Quotation not found' });
+  try {
+    const duplicate = await prisma.$transaction(async (tx) => {
+      const original = await tx.quotation.findUnique({
+        where: { id: req.params.id },
+        include: { items: true },
+      });
+      if (!original) throw new Error('Quotation not found');
 
-  const duplicate = await prisma.quotation.create({
-    data: {
-      quotationNumber: generateQuotationNumber(),
-      customerId: original.customerId,
-      createdById: req.user!.id,
-      subtotal: original.subtotal,
-      discountAmount: original.discountAmount,
-      discountPercent: original.discountPercent,
-      taxAmount: original.taxAmount,
-      totalAmount: original.totalAmount,
-      notes: original.notes,
-      termsConditions: original.termsConditions,
-      items: {
-        create: original.items.map(({ id: _id, quotationId: _qid, ...item }) => item),
-      },
-    },
-    include: { customer: true, items: true },
-  });
+      const quotationNumber = await getNextSequenceNumber(tx, 'QUO');
 
-  res.status(201).json(duplicate);
+      return tx.quotation.create({
+        data: {
+          quotationNumber,
+          customerId: original.customerId,
+          createdById: req.user!.id,
+          subtotal: original.subtotal,
+          discountAmount: original.discountAmount,
+          discountPercent: original.discountPercent,
+          taxAmount: original.taxAmount,
+          totalAmount: original.totalAmount,
+          notes: original.notes,
+          termsConditions: original.termsConditions,
+          items: {
+            create: original.items.map(({ id: _id, quotationId: _qid, ...item }) => item),
+          },
+        },
+        include: { customer: true, items: true },
+      });
+    });
+
+    res.status(201).json(duplicate);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to duplicate quotation' });
+  }
 });
 
 export default router;
+

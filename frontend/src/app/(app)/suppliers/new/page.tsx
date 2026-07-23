@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ interface SupplierForm {
 
 export default function NewSupplierPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -51,6 +53,8 @@ export default function NewSupplierPage() {
     mutationFn: async (data: SupplierForm) => (await api.post("/suppliers", data)).data,
     onSuccess: (supplier) => {
       toast.success("Supplier added successfully!");
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["suppliers-list"] });
       router.push(`/suppliers/${supplier.id}`);
     },
     onError: (err: { response?: { data?: { error?: string } } }) => toast.error(err.response?.data?.error || "Failed to add supplier"),

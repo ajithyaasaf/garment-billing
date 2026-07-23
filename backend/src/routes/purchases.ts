@@ -67,6 +67,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/purchases
+// POST /api/purchases
 router.post('/', async (req: AuthRequest, res: Response) => {
   const {
     supplierId, billNumber, billDate, items, discountAmount,
@@ -77,117 +78,121 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'Supplier ID, Bill Number and items are required' });
   }
 
-  let subtotal = 0;
-  let taxAmount = 0;
-
-  const processedItems = items.map((item: {
-    productId: string;
-    variantId?: string;
-    productName: string;
-    color?: string;
-    size?: string;
-    quantity: number;
-    unitPrice: number;
-    gstPercent: number;
-  }) => {
-    const itemTotal = item.quantity * item.unitPrice;
-    const gst = itemTotal * (item.gstPercent / 100);
-    subtotal += itemTotal;
-    taxAmount += gst;
-
-    return {
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      color: item.color,
-      size: item.size,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      gstPercent: item.gstPercent,
-      gstAmount: gst,
-      totalAmount: itemTotal + gst,
-    };
-  });
-
-  const totalAmount = subtotal + taxAmount - (discountAmount || 0);
-  const paid = paidAmount || 0;
-  const due = totalAmount - paid;
-
-  const paymentStatus = paid === 0 ? 'UNPAID' : paid >= totalAmount ? 'PAID' : 'PARTIAL';
-
   try {
-    const purchase = await prisma.purchaseBill.create({
-      data: {
-        billNumber,
-        supplierId,
-        createdById: req.user!.id,
-        subtotal,
-        discountAmount: discountAmount || 0,
-        taxAmount,
-        totalAmount,
-        paidAmount: paid,
-        dueAmount: due,
-        paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
-        paymentMethod: paymentMethod || 'CASH',
-        notes,
-        billDate: billDate ? new Date(billDate) : new Date(),
-        dueDate: dueDate ? new Date(dueDate) : undefined,
-        items: { create: processedItems },
-        ...(paid > 0 ? {
-          payments: {
-            create: {
-              amount: paid,
-              method: paymentMethod || 'CASH',
-            },
-          },
-        } : {}),
-      },
-      include: { supplier: true, items: true, payments: true },
-    });
+    const purchase = await prisma.$transaction(async (tx) => {
+      let subtotal = 0;
+      let taxAmount = 0;
 
-    // Update stock and cost prices for each variant (INWARD stock movement)
-    for (const item of items) {
-      if (item.variantId) {
-        const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
-        if (variant) {
-          const newStock = variant.stock + item.quantity;
-          
-          await prisma.productVariant.update({
-            where: { id: item.variantId },
-            data: { 
-              stock: newStock,
-              purchasePrice: item.unitPrice, // update the cost price dynamically!
-            },
-          });
+      const processedItems = items.map((item: {
+        productId: string;
+        variantId?: string;
+        productName: string;
+        color?: string;
+        size?: string;
+        quantity: number;
+        unitPrice: number;
+        gstPercent: number;
+      }) => {
+        const itemTotal = item.quantity * item.unitPrice;
+        const gst = itemTotal * (item.gstPercent / 100);
+        subtotal += itemTotal;
+        taxAmount += gst;
 
-          // Also update base product's purchase price to match the latest source cost
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { purchasePrice: item.unitPrice },
-          });
+        return {
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent: item.gstPercent,
+          gstAmount: gst,
+          totalAmount: itemTotal + gst,
+        };
+      });
 
-          await prisma.stockMovement.create({
-            data: {
-              productId: item.productId,
-              variantId: item.variantId,
-              type: 'INWARD',
-              quantity: item.quantity,
-              previousStock: variant.stock,
-              newStock: newStock,
-              reason: `Purchase Bill ${purchase.billNumber}`,
-              reference: purchase.id,
-              createdBy: req.user?.id,
+      const totalAmount = subtotal + taxAmount - (discountAmount || 0);
+      const paid = paidAmount || 0;
+      const due = Math.max(0, totalAmount - paid);
+
+      const paymentStatus = paid === 0 ? 'UNPAID' : paid >= totalAmount ? 'PAID' : 'PARTIAL';
+
+      const newPurchase = await tx.purchaseBill.create({
+        data: {
+          billNumber,
+          supplierId,
+          createdById: req.user!.id,
+          subtotal,
+          discountAmount: discountAmount || 0,
+          taxAmount,
+          totalAmount,
+          paidAmount: paid,
+          dueAmount: due,
+          paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
+          paymentMethod: paymentMethod || 'CASH',
+          notes,
+          billDate: billDate ? new Date(billDate) : new Date(),
+          dueDate: dueDate ? new Date(dueDate) : undefined,
+          items: { create: processedItems },
+          ...(paid > 0 ? {
+            payments: {
+              create: {
+                amount: paid,
+                method: paymentMethod || 'CASH',
+              },
             },
-          });
+          } : {}),
+        },
+        include: { supplier: true, items: true, payments: true },
+      });
+
+      // Update stock and cost prices atomically for each variant (INWARD stock movement)
+      for (const item of items) {
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+          if (variant) {
+            const newStock = variant.stock + item.quantity;
+            
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { 
+                stock: newStock,
+                purchasePrice: item.unitPrice,
+              },
+            });
+
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { purchasePrice: item.unitPrice },
+            });
+
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                variantId: item.variantId,
+                type: 'INWARD',
+                quantity: item.quantity,
+                previousStock: variant.stock,
+                newStock: newStock,
+                reason: `Purchase Bill ${newPurchase.billNumber}`,
+                reference: newPurchase.id,
+                createdBy: req.user?.id,
+              },
+            });
+          }
         }
       }
-    }
+
+      return newPurchase;
+    });
 
     res.status(201).json(purchase);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create purchase bill' });
   }
 });
+
 
 // POST /api/purchases/:id/payments
 router.post('/:id/payments', async (req: AuthRequest, res: Response) => {

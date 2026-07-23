@@ -9,68 +9,87 @@ router.use(authenticate);
 router.post('/inward', async (req: AuthRequest, res: Response) => {
   const { productId, variantId, quantity, reason, reference } = req.body;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!variant) return res.status(404).json({ error: 'Variant not found' });
+  try {
+    const movement = await prisma.$transaction(async (tx) => {
+      const variant = await tx.productVariant.findUnique({ where: { id: variantId } });
+      if (!variant) throw new Error('Variant not found');
 
-  const newStock = variant.stock + quantity;
-  await prisma.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
+      const newStock = variant.stock + quantity;
+      await tx.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
 
-  const movement = await prisma.stockMovement.create({
-    data: {
-      productId,
-      variantId,
-      type: 'INWARD',
-      quantity,
-      previousStock: variant.stock,
-      newStock,
-      reason,
-      reference,
-      createdBy: req.user?.id,
-    },
-  });
+      return tx.stockMovement.create({
+        data: {
+          productId,
+          variantId,
+          type: 'INWARD',
+          quantity,
+          previousStock: variant.stock,
+          newStock,
+          reason,
+          reference,
+          createdBy: req.user?.id,
+        },
+      });
+    });
 
-  res.status(201).json(movement);
+    res.status(201).json(movement);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to adjust stock' });
+  }
 });
 
 // POST /api/stock/return
 router.post('/return', async (req: AuthRequest, res: Response) => {
   const { productId, variantId, quantity, reason } = req.body;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!variant) return res.status(404).json({ error: 'Variant not found' });
+  try {
+    const movement = await prisma.$transaction(async (tx) => {
+      const variant = await tx.productVariant.findUnique({ where: { id: variantId } });
+      if (!variant) throw new Error('Variant not found');
 
-  const newStock = variant.stock + quantity;
-  await prisma.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
+      const newStock = variant.stock + quantity;
+      await tx.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
 
-  const movement = await prisma.stockMovement.create({
-    data: {
-      productId, variantId, type: 'RETURN', quantity,
-      previousStock: variant.stock, newStock, reason, createdBy: req.user?.id,
-    },
-  });
+      return tx.stockMovement.create({
+        data: {
+          productId, variantId, type: 'RETURN', quantity,
+          previousStock: variant.stock, newStock, reason, createdBy: req.user?.id,
+        },
+      });
+    });
 
-  res.status(201).json(movement);
+    res.status(201).json(movement);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to process return stock' });
+  }
 });
 
 // POST /api/stock/damaged
 router.post('/damaged', async (req: AuthRequest, res: Response) => {
   const { productId, variantId, quantity, reason } = req.body;
 
-  const variant = await prisma.productVariant.findUnique({ where: { id: variantId } });
-  if (!variant) return res.status(404).json({ error: 'Variant not found' });
+  try {
+    const movement = await prisma.$transaction(async (tx) => {
+      const variant = await tx.productVariant.findUnique({ where: { id: variantId } });
+      if (!variant) throw new Error('Variant not found');
 
-  const newStock = Math.max(0, variant.stock - quantity);
-  await prisma.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
+      const newStock = Math.max(0, variant.stock - quantity);
+      await tx.productVariant.update({ where: { id: variantId }, data: { stock: newStock } });
 
-  const movement = await prisma.stockMovement.create({
-    data: {
-      productId, variantId, type: 'DAMAGED', quantity: -quantity,
-      previousStock: variant.stock, newStock, reason, createdBy: req.user?.id,
-    },
-  });
+      return tx.stockMovement.create({
+        data: {
+          productId, variantId, type: 'DAMAGED', quantity: -quantity,
+          previousStock: variant.stock, newStock, reason, createdBy: req.user?.id,
+        },
+      });
+    });
 
-  res.status(201).json(movement);
+    res.status(201).json(movement);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to process damaged stock' });
+  }
 });
+
 
 // GET /api/stock/movements
 router.get('/movements', async (req: AuthRequest, res: Response) => {

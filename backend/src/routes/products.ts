@@ -62,8 +62,85 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   });
 });
 
+// GET /api/products/frequent - get top 5 products (customer-specific or top selling store-wide)
+router.get('/frequent', async (req: AuthRequest, res: Response) => {
+  const { customerId, limit = '5' } = req.query;
+  const targetLimit = parseInt(limit as string);
+  let productIds: string[] = [];
+  let isPersonalized = false;
+
+  if (customerId && typeof customerId === 'string' && customerId.trim() !== '') {
+    // Find top purchased items for this customer from past invoices
+    const frequentItems = await prisma.invoiceItem.groupBy({
+      by: ['productId'],
+      where: { invoice: { customerId } },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: targetLimit,
+    });
+    if (frequentItems.length > 0) {
+      productIds = frequentItems.map((item) => item.productId);
+      isPersonalized = true;
+    }
+  }
+
+  // If customer has no previous orders or no customer selected, fetch top selling products overall
+  if (productIds.length < targetLimit) {
+    const popularItems = await prisma.invoiceItem.groupBy({
+      by: ['productId'],
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: targetLimit,
+    });
+    const popularIds = popularItems.map((item) => item.productId);
+    for (const pid of popularIds) {
+      if (!productIds.includes(pid)) {
+        productIds.push(pid);
+      }
+    }
+  }
+
+  // Fetch product objects with category and variants
+  let products = await prisma.product.findMany({
+    where: {
+      id: { in: productIds },
+      isActive: true,
+    },
+    include: {
+      category: { select: { name: true } },
+      variants: { select: { id: true, color: true, size: true, stock: true, minStock: true, wholesalePrice: true } },
+    },
+  });
+
+  // If still fewer than limit (e.g., brand new store with zero invoices), fetch latest active products
+  if (products.length < targetLimit) {
+    const fallbackProducts = await prisma.product.findMany({
+      where: { isActive: true },
+      take: targetLimit,
+      include: {
+        category: { select: { name: true } },
+        variants: { select: { id: true, color: true, size: true, stock: true, minStock: true, wholesalePrice: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    // Merge fallback products without duplicates
+    for (const fp of fallbackProducts) {
+      if (!products.some((p) => p.id === fp.id)) {
+        products.push(fp);
+      }
+    }
+  }
+
+  res.json({
+    data: products.slice(0, targetLimit),
+    isPersonalized,
+  });
+});
+
 // GET /api/products/:id
 router.get('/:id', async (req: AuthRequest, res: Response) => {
+
   const product = await prisma.product.findUnique({
     where: { id: req.params.id },
     include: {
@@ -166,32 +243,42 @@ router.post('/:id/duplicate', async (req: AuthRequest, res: Response) => {
 // PATCH /api/products/variants/:variantId/stock
 router.patch('/variants/:variantId/stock', async (req: AuthRequest, res: Response) => {
   const { stock } = req.body;
-  const variant = await prisma.productVariant.findUnique({
-    where: { id: req.params.variantId },
-  });
-  if (!variant) return res.status(404).json({ error: 'Variant not found' });
 
-  const updated = await prisma.productVariant.update({
-    where: { id: req.params.variantId },
-    data: { stock },
-  });
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const variant = await tx.productVariant.findUnique({
+        where: { id: req.params.variantId },
+      });
+      if (!variant) throw new Error('Variant not found');
 
-  // Log stock movement
-  await prisma.stockMovement.create({
-    data: {
-      productId: variant.productId,
-      variantId: variant.id,
-      type: 'ADJUSTMENT',
-      quantity: stock - variant.stock,
-      previousStock: variant.stock,
-      newStock: stock,
-      reason: 'Manual adjustment',
-      createdBy: req.user?.id,
-    },
-  });
+      const updatedVariant = await tx.productVariant.update({
+        where: { id: req.params.variantId },
+        data: { stock },
+      });
 
-  res.json(updated);
+      // Log stock movement
+      await tx.stockMovement.create({
+        data: {
+          productId: variant.productId,
+          variantId: variant.id,
+          type: 'ADJUSTMENT',
+          quantity: stock - variant.stock,
+          previousStock: variant.stock,
+          newStock: stock,
+          reason: 'Manual adjustment',
+          createdBy: req.user?.id,
+        },
+      });
+
+      return updatedVariant;
+    });
+
+    res.json(updated);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update variant stock' });
+  }
 });
+
 
 // GET /api/products/:id/variants
 router.get('/:id/variants', async (req: AuthRequest, res: Response) => {

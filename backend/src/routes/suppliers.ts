@@ -67,21 +67,48 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json({ ...supplier, outstandingBalance: outstanding._sum.dueAmount || 0 });
 });
 
-// POST /api/suppliers
-router.post('/', async (req: AuthRequest, res: Response) => {
-  if (req.body.gstNumber) {
-    const derivedState = getStateFromGst(req.body.gstNumber);
-    if (derivedState) {
-      req.body.state = derivedState;
-    }
+// Helper to sanitize supplier input
+function sanitizeSupplierInput(body: any) {
+  const {
+    shopName,
+    ownerName,
+    whatsapp,
+    email,
+    gstNumber,
+    address,
+    city,
+    state = 'Tamil Nadu',
+    pincode,
+  } = body;
+
+  if (!shopName || !ownerName || !whatsapp) {
+    throw new Error('Shop name, owner name, and WhatsApp number are required');
   }
 
-  // Normalize empty strings to null for optional database fields
-  if (req.body.gstNumber === '') req.body.gstNumber = null;
-  if (req.body.email === '') req.body.email = null;
+  let derivedState = state;
+  if (gstNumber) {
+    const autoState = getStateFromGst(gstNumber);
+    if (autoState) derivedState = autoState;
+  }
 
+  return {
+    shopName: shopName.trim(),
+    ownerName: ownerName.trim(),
+    whatsapp: whatsapp.trim(),
+    email: email && email.trim() !== '' ? email.trim() : null,
+    gstNumber: gstNumber && gstNumber.trim() !== '' ? gstNumber.trim().toUpperCase() : null,
+    address: address && address.trim() !== '' ? address.trim() : null,
+    city: city && city.trim() !== '' ? city.trim() : null,
+    state: derivedState,
+    pincode: pincode && pincode.trim() !== '' ? pincode.trim() : null,
+  };
+}
+
+// POST /api/suppliers
+router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const supplier = await prisma.supplier.create({ data: req.body });
+    const data = sanitizeSupplierInput(req.body);
+    const supplier = await prisma.supplier.create({ data });
     res.status(201).json(supplier);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create supplier' });
@@ -90,26 +117,18 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
 // PUT /api/suppliers/:id
 router.put('/:id', async (req: AuthRequest, res: Response) => {
-  if (req.body.gstNumber) {
-    const derivedState = getStateFromGst(req.body.gstNumber);
-    if (derivedState) {
-      req.body.state = derivedState;
-    }
-  }
-
-  if (req.body.gstNumber === '') req.body.gstNumber = null;
-  if (req.body.email === '') req.body.email = null;
-
   try {
+    const data = sanitizeSupplierInput(req.body);
     const supplier = await prisma.supplier.update({
       where: { id: req.params.id },
-      data: req.body,
+      data,
     });
     res.json(supplier);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to update supplier' });
   }
 });
+
 
 // DELETE /api/suppliers/:id
 router.delete('/:id', async (req: AuthRequest, res: Response) => {

@@ -72,112 +72,126 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json(invoice);
 });
 
+import { getNextSequenceNumber } from '../lib/sequence';
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   const {
     customerId, items, discountAmount, discountPercent,
     paymentMethod, paidAmount, notes, termsConditions, dueDate,
   } = req.body;
 
-  let subtotal = 0;
-  let taxAmount = 0;
+  try {
+    const resultInvoice = await prisma.$transaction(async (tx) => {
+      let subtotal = 0;
+      let taxAmount = 0;
 
-  const processedItems = items.map((item: {
-    productId: string;
-    variantId?: string;
-    productName: string;
-    color?: string;
-    size?: string;
-    sku?: string;
-    quantity: number;
-    unitPrice: number;
-    gstPercent: number;
-    discount?: number;
-  }) => {
-    const itemTotal = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
-    const gst = itemTotal * (item.gstPercent / 100);
-    subtotal += itemTotal;
-    taxAmount += gst;
-    return {
-      productId: item.productId,
-      variantId: item.variantId,
-      productName: item.productName,
-      color: item.color,
-      size: item.size,
-      sku: item.sku,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      gstPercent: item.gstPercent,
-      gstAmount: gst,
-      totalAmount: itemTotal + gst,
-      discount: item.discount || 0,
-    };
-  });
+      const processedItems = items.map((item: {
+        productId: string;
+        variantId?: string;
+        productName: string;
+        color?: string;
+        size?: string;
+        sku?: string;
+        quantity: number;
+        unitPrice: number;
+        gstPercent: number;
+        discount?: number;
+      }) => {
+        const itemTotal = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+        const gst = itemTotal * (item.gstPercent / 100);
+        subtotal += itemTotal;
+        taxAmount += gst;
+        return {
+          productId: item.productId,
+          variantId: item.variantId,
+          productName: item.productName,
+          color: item.color,
+          size: item.size,
+          sku: item.sku,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          gstPercent: item.gstPercent,
+          gstAmount: gst,
+          totalAmount: itemTotal + gst,
+          discount: item.discount || 0,
+        };
+      });
 
-  const totalAmount = subtotal + taxAmount - (discountAmount || 0);
-  const paid = paidAmount || 0;
-  const due = totalAmount - paid;
+      const totalAmount = subtotal + taxAmount - (discountAmount || 0);
+      const paid = paidAmount || 0;
+      const due = totalAmount - paid;
 
-  const paymentStatus =
-    paid === 0 ? 'UNPAID' : paid >= totalAmount ? 'PAID' : 'PARTIAL';
+      const paymentStatus =
+        paid === 0 ? 'UNPAID' : paid >= totalAmount ? 'PAID' : 'PARTIAL';
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      invoiceNumber: generateInvoiceNumber(),
-      customerId,
-      createdById: req.user!.id,
-      subtotal,
-      discountAmount: discountAmount || 0,
-      discountPercent: discountPercent || 0,
-      taxAmount,
-      totalAmount,
-      paidAmount: paid,
-      dueAmount: due,
-      paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
-      paymentMethod: paymentMethod || 'CASH',
-      notes,
-      termsConditions,
-      dueDate: dueDate ? new Date(dueDate) : undefined,
-      items: { create: processedItems },
-      ...(paid > 0 ? {
-        payments: {
-          create: {
-            amount: paid,
-            method: paymentMethod || 'CASH',
-          },
+      const invoiceNumber = await getNextSequenceNumber(tx, 'INV');
+
+      const invoice = await tx.invoice.create({
+        data: {
+          invoiceNumber,
+          customerId,
+          createdById: req.user!.id,
+          subtotal,
+          discountAmount: discountAmount || 0,
+          discountPercent: discountPercent || 0,
+          taxAmount,
+          totalAmount,
+          paidAmount: paid,
+          dueAmount: due,
+          paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
+          paymentMethod: paymentMethod || 'CASH',
+          notes,
+          termsConditions,
+          dueDate: dueDate ? new Date(dueDate) : undefined,
+          items: { create: processedItems },
+          ...(paid > 0 ? {
+            payments: {
+              create: {
+                amount: paid,
+                method: paymentMethod || 'CASH',
+              },
+            },
+          } : {}),
         },
-      } : {}),
-    },
-    include: { customer: true, items: true, payments: true },
-  });
+        include: { customer: true, items: true, payments: true },
+      });
 
-  // Update stock for each variant
-  for (const item of items) {
-    if (item.variantId) {
-      const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId } });
-      if (variant) {
-        await prisma.productVariant.update({
-          where: { id: item.variantId },
-          data: { stock: Math.max(0, variant.stock - item.quantity) },
-        });
-        await prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            variantId: item.variantId,
-            type: 'OUTWARD',
-            quantity: -item.quantity,
-            previousStock: variant.stock,
-            newStock: Math.max(0, variant.stock - item.quantity),
-            reason: `Invoice ${invoice.invoiceNumber}`,
-            reference: invoice.id,
-            createdBy: req.user?.id,
-          },
-        });
+      // Update stock atomically for each variant
+      for (const item of items) {
+        if (item.variantId) {
+          const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } });
+          if (variant) {
+            const updatedStock = Math.max(0, variant.stock - item.quantity);
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: updatedStock },
+            });
+            await tx.stockMovement.create({
+              data: {
+                productId: item.productId,
+                variantId: item.variantId,
+                type: 'OUTWARD',
+                quantity: -item.quantity,
+                previousStock: variant.stock,
+                newStock: updatedStock,
+                reason: `Invoice ${invoice.invoiceNumber}`,
+                reference: invoice.id,
+                createdBy: req.user?.id,
+              },
+            });
+          }
+        }
       }
-    }
-  }
 
-  res.status(201).json(invoice);
+      return invoice;
+    });
+
+    res.status(201).json(resultInvoice);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create invoice' });
+  }
 });
+
 
 // POST /api/invoices/:id/payment - Record a payment
 router.post('/:id/payment', async (req: AuthRequest, res: Response) => {

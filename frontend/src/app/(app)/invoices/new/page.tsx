@@ -88,9 +88,21 @@ export default function NewInvoicePage() {
   const watchPaid = watch("paidAmount") || 0;
   const selectedCustomerId = watch("customerId");
 
+  // Fetch top 5 frequent/recommended products
+  const { data: frequentProducts } = useQuery({
+    queryKey: ["product-frequent-invoice", selectedCustomerId],
+    queryFn: async () => {
+      const url = selectedCustomerId
+        ? `/products/frequent?customerId=${selectedCustomerId}&limit=5`
+        : `/products/frequent?limit=5`;
+      return (await api.get(url)).data;
+    },
+  });
+
   // Determine if selected customer is RETAIL or WHOLESALE
   const selectedCustomerObj = customers?.data?.find((c: any) => c.id === selectedCustomerId);
   const isRetailCustomer = selectedCustomerObj?.type === "RETAIL";
+
 
   // Dynamic pricing updates when customer changes
   useEffect(() => {
@@ -273,7 +285,7 @@ export default function NewInvoicePage() {
                       <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowProductSearch(false)}>Cancel</button>
                     </div>
 
-                    {productResults?.data?.length > 0 && (
+                    {((productSearch.trim().length > 0 ? productResults?.data : frequentProducts?.data) || []).length > 0 && (
                       <div
                         style={{
                           position: "absolute",
@@ -288,7 +300,18 @@ export default function NewInvoicePage() {
                           overflow: "hidden",
                         }}
                       >
-                        {productResults.data.map((product: {
+                        {/* Header for default suggestions */}
+                        {!productSearch.trim() && (
+                          <div style={{ padding: "0.5rem 1rem", background: "var(--bg-tertiary)", borderBottom: "1px solid var(--border-color)", fontSize: "0.75rem", fontWeight: 700, color: "var(--brand-600)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                            {frequentProducts?.isPersonalized
+                              ? `⭐ Frequently Ordered by ${selectedCustomerObj?.shopName || selectedCustomerObj?.ownerName || "Customer"}`
+                              : `🔥 Recommended Top 5 Products`
+                            }
+                          </div>
+                        )}
+
+                        {(productSearch.trim().length > 0 ? productResults?.data : frequentProducts?.data).map((product: {
+
                           id: string;
                           name: string;
                           sku: string;
@@ -321,7 +344,7 @@ export default function NewInvoicePage() {
                             <div>
                               <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>{product.name}</div>
                               <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                                {product.sku} · {product.category.name} · {product.variants.length} variants
+                                {product.sku} · {product.category?.name || "General"} · {product.variants?.length || 0} variants
                               </div>
                             </div>
                             <div style={{ textAlign: "right" }}>
@@ -341,6 +364,7 @@ export default function NewInvoicePage() {
                         ))}
                       </div>
                     )}
+
                   </div>
                 )}
 

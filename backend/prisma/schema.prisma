@@ -530,3 +530,18 @@ model PurchasePayment {
   @@index([purchaseBillId])
   @@map("purchase_payments")
 }
+
+// ============================
+// ATOMIC SEQUENCE COUNTERS
+// ============================
+
+model SequenceCounter {
+  id         String   @id
+  type       String
+  yearMonth  String
+  lastSeq    Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  @@map("sequence_counters")
+}
+
