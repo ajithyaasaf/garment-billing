@@ -277,16 +277,6 @@ export default function NewOrderPage() {
                           overflow: "hidden",
                         }}
                       >
-                        {/* Header for default suggestions */}
-                        {!productSearch.trim() && (
-                          <div style={{ padding: "0.5rem 1rem", background: "var(--bg-tertiary)", borderBottom: "1px solid var(--border-color)", fontSize: "0.75rem", fontWeight: 700, color: "var(--brand-600)", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                            {frequentProducts?.isPersonalized
-                              ? `⭐ Frequently Ordered by ${selectedCustomerObj?.shopName || selectedCustomerObj?.ownerName || "Customer"}`
-                              : `🔥 Recommended Top 5 Products`
-                            }
-                          </div>
-                        )}
-
                         {(productSearch.trim().length > 0 ? productResults?.data : frequentProducts?.data).map((product: {
 
                           id: string;
