@@ -47,7 +47,9 @@ export function getPaymentStatusBadge(status: string): string {
 
 export function getOrderStatusBadge(status: string): string {
   const map: Record<string, string> = {
+    DELIVERED: "badge-success",
     COMPLETED: "badge-success",
+    SHIPPED: "badge-primary",
     PENDING: "badge-warning",
     CANCELLED: "badge-danger",
   };

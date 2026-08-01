@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Receipt, Download, Eye, Pencil } from "lucide-react";
+import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, debounce } from "@/lib/utils";
 import Link from "next/link";
+import { QuickPaymentModal } from "@/components/ui/quick-payment-modal";
 
 interface Invoice {
   id: string;
@@ -23,10 +25,37 @@ interface Invoice {
 }
 
 export default function InvoicesPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("");
+  const [paymentTarget, setPaymentTarget] = useState<{
+    id: string;
+    invoiceNumber: string;
+    dueAmount: number;
+    customerName: string;
+  } | null>(null);
+
+  const markFullPaid = useMutation({
+    mutationFn: async (inv: Invoice) => {
+      return (
+        await api.post(`/invoices/${inv.id}/payment`, {
+          amount: inv.dueAmount,
+          method: "UPI",
+          notes: "Marked as Paid in full",
+        })
+      ).data;
+    },
+    onSuccess: (_, inv) => {
+      toast.success(`Invoice ${inv.invoiceNumber} marked as Fully Paid!`);
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to mark invoice as paid");
+    },
+  });
 
   const debouncedSetSearch = useCallback(
     debounce((val: string) => { setDebouncedSearch(val as string); setPage(1); }, 300), []
@@ -129,7 +158,25 @@ export default function InvoicesPage() {
                     </td>
                     <td><span className={`badge ${getPaymentStatusBadge(inv.paymentStatus)}`}>{inv.paymentStatus}</span></td>
                     <td>
-                      <div style={{ display: "flex", gap: "0.375rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                        {inv.dueAmount > 0 && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem", height: "auto" }}
+                            title="Record Payment"
+                            onClick={() =>
+                              setPaymentTarget({
+                                id: inv.id,
+                                invoiceNumber: inv.invoiceNumber,
+                                dueAmount: inv.dueAmount,
+                                customerName: inv.customer.shopName || inv.customer.ownerName || "Customer",
+                              })
+                            }
+                          >
+                            <CreditCard size={12} />
+                            <span>+ Pay</span>
+                          </button>
+                        )}
                         <Link href={`/invoices/${inv.id}`} className="btn btn-ghost btn-sm btn-icon" title="View Invoice">
                           <Eye size={14} />
                         </Link>
@@ -172,6 +219,15 @@ export default function InvoicesPage() {
           <button className="btn btn-secondary btn-sm" disabled={page === data.meta.totalPages} onClick={() => setPage(page + 1)}>Next</button>
         </div>
       )}
+
+      {/* 1-Click Quick Payment Modal */}
+      <QuickPaymentModal
+        open={Boolean(paymentTarget)}
+        onOpenChange={(open) => {
+          if (!open) setPaymentTarget(null);
+        }}
+        invoice={paymentTarget}
+      />
     </div>
   );
 }

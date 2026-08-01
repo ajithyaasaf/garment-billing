@@ -22,6 +22,7 @@ import {
   Search,
   Truck,
   ShoppingCart,
+  Plus,
 } from "lucide-react";
 import { useAuthStore, useUIStore } from "@/store";
 import { toast } from "sonner";
@@ -196,6 +197,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav style={{ flex: 1, paddingTop: "0.25rem", overflowY: "auto" }}>
+          {/* Quick Action + New Sale Button */}
+          <div style={{ padding: "0 0.75rem 0.75rem" }}>
+            <Link
+              href="/sales/new"
+              onClick={() => setSidebarOpen(false)}
+              className="btn btn-primary w-full justify-center"
+              style={{
+                fontWeight: 700,
+                fontSize: "0.875rem",
+                padding: "0.625rem",
+                borderRadius: "0.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+              }}
+            >
+              <Plus size={16} />
+              + New Sale
+            </Link>
+          </div>
+
           <div style={{ marginBottom: "0.25rem", padding: "0 0.75rem 0.5rem" }}>
             <span
               style={{

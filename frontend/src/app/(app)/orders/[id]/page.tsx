@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
+import { StatusBadgeSelect } from "@/components/ui/status-badge-select";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -24,6 +25,19 @@ export default function OrderDetailPage() {
   const { data: business } = useQuery({
     queryKey: ["business-profile"],
     queryFn: async () => (await api.get("/settings/business")).data,
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: async (newStatus: string) =>
+      (await api.patch(`/orders/${id}/status`, { status: newStatus })).data,
+    onSuccess: () => {
+      toast.success("Order status updated successfully!");
+      qc.invalidateQueries({ queryKey: ["order", id] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to update order status");
+    },
   });
 
   const convertMutation = useMutation({
@@ -91,7 +105,13 @@ export default function OrderDetailPage() {
             <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>Manage order details</p>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <StatusBadgeSelect
+            status={order.status}
+            onChange={(newStatus) => updateStatus.mutate(newStatus)}
+            disabled={updateStatus.isPending}
+          />
+
           <button className="btn btn-secondary btn-sm" onClick={handlePrint}>
             <Printer size={14} />
             Print

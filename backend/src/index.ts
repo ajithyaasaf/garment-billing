@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import 'express-async-errors';
 
+// Production Garment ERP - Live Backend
 import authRoutes from './routes/auth';
 import dashboardRoutes from './routes/dashboard';
 import productRoutes from './routes/products';

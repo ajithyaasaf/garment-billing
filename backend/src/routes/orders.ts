@@ -50,7 +50,14 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       }) => {
         const total = item.quantity * item.unitPrice;
         totalAmount += total;
-        return { ...item, totalAmount: total };
+        return {
+          productId: item.productId,
+          variantId: item.variantId || null,
+          productName: item.productName,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          totalAmount: total,
+        };
       });
 
       const orderNumber = await getNextSequenceNumber(tx, 'ORD');
