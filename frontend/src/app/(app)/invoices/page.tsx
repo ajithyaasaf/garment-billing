@@ -3,11 +3,12 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2, MessageCircle } from "lucide-react";
+import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, debounce, openWhatsAppShare } from "@/lib/utils";
 import Link from "next/link";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { QuickPaymentModal } from "@/components/ui/quick-payment-modal";
 
 interface Invoice {
@@ -207,7 +208,7 @@ export default function InvoicesPage() {
                             })
                           }
                         >
-                          <MessageCircle size={14} />
+                          <WhatsAppIcon size={14} />
                         </button>
                         <button 
                           className="btn btn-ghost btn-sm btn-icon" 

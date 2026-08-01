@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingBag, Plus, Download, Eye, Search, ChevronLeft, ChevronRight, X, MessageCircle } from "lucide-react";
+import { ShoppingBag, Plus, Download, Eye, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, openWhatsAppShare } from "@/lib/utils";
 import Link from "next/link";
 import { StatusBadgeSelect } from "@/components/ui/status-badge-select";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 interface OrderItem {
   id: string;
@@ -330,7 +331,7 @@ export default function OrdersPage() {
                                 })
                               }
                             >
-                              <MessageCircle size={14} />
+                              <WhatsAppIcon size={14} />
                             </button>
                             <Link
                               href={detailHref}

@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X, Pencil, MessageCircle } from "lucide-react";
+import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X, Pencil } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, openWhatsAppShare } from "@/lib/utils";
 import Link from "next/link";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 
 interface Payment {
   id: string;
@@ -168,7 +169,7 @@ export default function InvoiceDetailPage() {
               })
             }
           >
-            <MessageCircle size={14} /> WhatsApp Share
+            <WhatsAppIcon size={14} /> WhatsApp Share
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
             <Download size={14} /> Print / Save PDF
