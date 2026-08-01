@@ -575,19 +575,40 @@ function NewSaleContent() {
                     <div style={{ borderTop: "1px solid var(--border-color)", paddingTop: "0.75rem" }}>
                       <label className="form-label">Payment Method</label>
                       <select className="form-select" {...register("paymentMethod")}>
-                        <option value="CASH">💵 Cash</option>
-                        <option value="UPI">📱 UPI / PhonePe / GPay</option>
-                        <option value="BANK_TRANSFER">🏦 Bank Transfer (NEFT/RTGS)</option>
-                        <option value="CHEQUE">📝 Cheque</option>
+                        <option value="UPI">UPI / PhonePe / GPay</option>
+                        <option value="CASH">Cash</option>
+                        <option value="BANK_TRANSFER">Bank Transfer (NEFT/RTGS)</option>
+                        <option value="CHEQUE">Cheque</option>
                       </select>
                     </div>
 
                     <div className="form-group mb-0">
-                      <label className="form-label">Amount Paid Received (₹)</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
+                        <label className="form-label" style={{ marginBottom: 0 }}>Amount Paid Received (₹)</label>
+                        <div style={{ display: "flex", gap: "0.375rem" }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-xs"
+                            style={{ fontSize: "0.6875rem", fontWeight: 700, padding: "0.125rem 0.5rem" }}
+                            onClick={() => setValue("paidAmount", totalAmount)}
+                          >
+                            Full ({formatCurrency(totalAmount)})
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            style={{ fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}
+                            onClick={() => setValue("paidAmount", 0)}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
                       <input
                         type="number"
                         step="1"
                         className="form-input"
+                        style={{ fontWeight: 700, fontSize: "1.125rem" }}
                         {...register("paidAmount", { valueAsNumber: true })}
                       />
                     </div>

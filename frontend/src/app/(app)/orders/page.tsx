@@ -10,7 +10,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { StatusBadgeSelect } from "@/components/ui/status-badge-select";
 
-interface Order {
+interface OrderItem {
   id: string;
   orderNumber: string;
   customerId: string;
@@ -20,6 +20,7 @@ interface Order {
   customer: { shopName?: string; ownerName?: string; type?: string };
   createdBy: { name: string };
   _count: { items: number };
+  isInvoice?: boolean;
 }
 
 export default function OrdersPage() {
@@ -27,7 +28,7 @@ export default function OrdersPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const qc = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const { data: ordersData, isLoading: loadingOrders } = useQuery({
     queryKey: ["orders", statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: "50", ...(statusFilter && { status: statusFilter }) });
@@ -35,22 +36,62 @@ export default function OrdersPage() {
     },
   });
 
-  const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) =>
-      (await api.patch(`/orders/${id}/status`, { status })).data,
-    onSuccess: () => {
-      toast.success("Order status updated");
-      qc.invalidateQueries({ queryKey: ["orders"] });
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.error || "Failed to update order status");
+  const { data: invoicesData, isLoading: loadingInvoices } = useQuery({
+    queryKey: ["invoices-orders-view"],
+    queryFn: async () => {
+      return (await api.get(`/invoices?limit=50`)).data;
     },
   });
 
-  const rawOrders = data?.data || [];
-  const orders = typeFilter
-    ? rawOrders.filter((o: Order) => o.customer?.type === typeFilter)
-    : rawOrders;
+  const updateStatus = useMutation({
+    mutationFn: async ({ id, status, isInvoice }: { id: string; status: string; isInvoice?: boolean }) => {
+      if (isInvoice) {
+        return (await api.patch(`/invoices/${id}`, { status })).data;
+      }
+      return (await api.patch(`/orders/${id}/status`, { status })).data;
+    },
+    onSuccess: () => {
+      toast.success("Status updated");
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["invoices-orders-view"] });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to update status");
+    },
+  });
+
+  const isLoading = loadingOrders || loadingInvoices;
+
+  // Normalize orders and invoices into a unified list
+  const rawOrders: OrderItem[] = (ordersData?.data || []).map((o: any) => ({
+    ...o,
+    isInvoice: false,
+  }));
+
+  const rawInvoices: OrderItem[] = (invoicesData?.data || []).map((inv: any) => ({
+    id: inv.id,
+    orderNumber: inv.invoiceNumber,
+    customerId: inv.customerId,
+    status: inv.orderStatus || "PENDING",
+    totalAmount: inv.totalAmount,
+    createdAt: inv.createdAt,
+    customer: inv.customer,
+    createdBy: inv.createdBy,
+    _count: inv._count,
+    isInvoice: true,
+  }));
+
+  // Combine and sort strictly by createdAt DESCENDING (Latest First!)
+  const combined = [...rawInvoices, ...rawOrders].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  // Apply status & type filters
+  const orders = combined.filter((o) => {
+    if (statusFilter && o.status !== statusFilter) return false;
+    if (typeFilter && o.customer?.type !== typeFilter) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -61,7 +102,7 @@ export default function OrdersPage() {
             Sales Orders & Dispatch
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-            {data?.meta?.total || 0} active orders across Wholesale & Retail
+            Showing {orders.length} latest sales & dispatch orders (sorted newest first)
           </p>
         </div>
         <Link href="/sales/new" className="btn btn-primary btn-sm">
@@ -120,7 +161,7 @@ export default function OrdersPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>Order #</th>
+                <th>Ref #</th>
                 <th>Type</th>
                 <th>Customer</th>
                 <th>Items</th>
@@ -132,13 +173,14 @@ export default function OrdersPage() {
             </thead>
             <tbody>
               {orders.length ? (
-                orders.map((o: Order) => {
+                orders.map((o: OrderItem) => {
                   const isWholesale = o.customer?.type === "WHOLESALE";
+                  const detailHref = o.isInvoice ? `/invoices/${o.id}` : `/orders/${o.id}`;
                   return (
                     <tr key={o.id}>
                       <td>
                         <Link
-                          href={`/orders/${o.id}`}
+                          href={detailHref}
                           className="text-[var(--brand-600)] hover:underline"
                           style={{ fontWeight: 700 }}
                         >
@@ -161,14 +203,14 @@ export default function OrdersPage() {
                       <td>
                         <StatusBadgeSelect
                           status={o.status}
-                          onChange={(newStatus) => updateStatus.mutate({ id: o.id, status: newStatus })}
+                          onChange={(newStatus) => updateStatus.mutate({ id: o.id, status: newStatus, isInvoice: o.isInvoice })}
                           disabled={updateStatus.isPending}
                         />
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
                           <Link
-                            href={`/orders/${o.id}`}
+                            href={detailHref}
                             className="btn btn-ghost btn-sm btn-icon"
                             title="View Details"
                           >
@@ -177,7 +219,7 @@ export default function OrdersPage() {
                           <button
                             className="btn btn-ghost btn-sm btn-icon"
                             title="Download/Print PDF"
-                            onClick={() => window.open(`/orders/${o.id}?print=true`, "_blank")}
+                            onClick={() => window.open(`${detailHref}?print=true`, "_blank")}
                           >
                             <Download size={14} />
                           </button>
