@@ -453,4 +453,52 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PATCH /invoices/:id — update paymentStatus for invoice rows in orders view
+router.patch('/:id', async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { status, paymentStatus } = req.body;
+
+  // Map fulfillment status to paymentStatus equivalent if needed
+  // Invoices track paymentStatus (UNPAID/PARTIAL/PAID) not fulfillment status
+  const updateData: Record<string, string> = {};
+
+  if (paymentStatus) {
+    const allowed = ['UNPAID', 'PARTIAL', 'PAID'];
+    if (!allowed.includes(paymentStatus)) {
+      res.status(400).json({ error: `Invalid paymentStatus. Must be one of: ${allowed.join(', ')}` });
+      return;
+    }
+    updateData.paymentStatus = paymentStatus;
+  } else if (status) {
+    // Fulfillment status mapping: for invoices, DELIVERED = PAID, SHIPPED = PARTIAL, CANCELLED = UNPAID
+    const statusToPayment: Record<string, string> = {
+      DELIVERED: 'PAID',
+      SHIPPED: 'PARTIAL',
+      PENDING: 'UNPAID',
+      CANCELLED: 'UNPAID',
+      CONFIRMED: 'UNPAID',
+      PROCESSING: 'PARTIAL',
+    };
+    const mapped = statusToPayment[status];
+    if (!mapped) {
+      res.status(400).json({ error: `Invalid status value: ${status}` });
+      return;
+    }
+    updateData.paymentStatus = mapped;
+  } else {
+    res.status(400).json({ error: 'No valid field to update' });
+    return;
+  }
+
+  try {
+    const invoice = await prisma.invoice.update({
+      where: { id },
+      data: updateData,
+    });
+    res.json(invoice);
+  } catch (error: any) {
+    res.status(404).json({ error: 'Invoice not found' });
+  }
+});
+
 export default router;

@@ -209,5 +209,27 @@ router.post('/:id/convert', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// PATCH /orders/:id/status — update fulfillment status
+router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const allowed = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'COMPLETED'];
+  if (!status || !allowed.includes(status)) {
+    res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
+    return;
+  }
+
+  try {
+    const order = await prisma.order.update({
+      where: { id },
+      data: { status },
+    });
+    res.json(order);
+  } catch (error: any) {
+    res.status(404).json({ error: 'Order not found' });
+  }
+});
+
 export default router;
 
