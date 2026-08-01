@@ -10,7 +10,7 @@ export default function NewOrderRedirectPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    params.set("mode", "ORDER");
+    params.set("mode", "INVOICE");
     if (customerId) params.set("customerId", customerId);
     router.replace(`/sales/new?${params.toString()}`);
   }, [router, customerId]);
