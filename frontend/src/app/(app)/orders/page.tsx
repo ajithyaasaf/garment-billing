@@ -17,13 +17,14 @@ interface Order {
   status: string;
   totalAmount: number;
   createdAt: string;
-  customer: { shopName?: string; ownerName?: string };
+  customer: { shopName?: string; ownerName?: string; type?: string };
   createdBy: { name: string };
   _count: { items: number };
 }
 
 export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -46,7 +47,10 @@ export default function OrdersPage() {
     },
   });
 
-  const orders = data?.data || [];
+  const rawOrders = data?.data || [];
+  const orders = typeFilter
+    ? rawOrders.filter((o: Order) => o.customer?.type === typeFilter)
+    : rawOrders;
 
   return (
     <div>
@@ -54,10 +58,10 @@ export default function OrdersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>
-            Sales Orders
+            Sales Orders & Dispatch
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-            {data?.meta?.total || 0} active sales orders
+            {data?.meta?.total || 0} active orders across Wholesale & Retail
           </p>
         </div>
         <Link href="/sales/new" className="btn btn-primary btn-sm">
@@ -66,23 +70,42 @@ export default function OrdersPage() {
         </Link>
       </div>
 
-      {/* Clean Status Filter Bar */}
-      <div className="grid grid-cols-5 sm:flex gap-2 mb-5">
-        {[
-          { key: "", label: "All" },
-          { key: "PENDING", label: "Pending" },
-          { key: "SHIPPED", label: "Shipped" },
-          { key: "DELIVERED", label: "Delivered" },
-          { key: "CANCELLED", label: "Cancelled" },
-        ].map((s) => (
-          <button
-            key={s.key}
-            className={`btn btn-sm justify-center ${statusFilter === s.key ? "btn-primary" : "btn-secondary"}`}
-            onClick={() => setStatusFilter(s.key)}
-          >
-            {s.label}
-          </button>
-        ))}
+      {/* Filter Bar: Status & Customer Type */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "", label: "All Statuses" },
+            { key: "PENDING", label: "Pending" },
+            { key: "SHIPPED", label: "Shipped" },
+            { key: "DELIVERED", label: "Delivered" },
+            { key: "CANCELLED", label: "Cancelled" },
+          ].map((s) => (
+            <button
+              key={s.key}
+              className={`btn btn-sm ${statusFilter === s.key ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setStatusFilter(s.key)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          {[
+            { key: "", label: "All Customers" },
+            { key: "WHOLESALE", label: "Wholesale" },
+            { key: "RETAIL", label: "Retail" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              className={`btn btn-sm ${typeFilter === t.key ? "btn-dark" : "btn-ghost"}`}
+              style={{ fontSize: "0.75rem" }}
+              onClick={() => setTypeFilter(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -98,65 +121,74 @@ export default function OrdersPage() {
             <thead>
               <tr>
                 <th>Order #</th>
+                <th>Type</th>
                 <th>Customer</th>
                 <th>Items</th>
                 <th>Total</th>
                 <th>Date</th>
-                <th>Status</th>
+                <th>Fulfillment Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {orders.length ? (
-                orders.map((o: Order) => (
-                  <tr key={o.id}>
-                    <td>
-                      <Link
-                        href={`/orders/${o.id}`}
-                        className="text-[var(--brand-600)] hover:underline"
-                        style={{ fontWeight: 700 }}
-                      >
-                        {o.orderNumber}
-                      </Link>
-                    </td>
-                    <td style={{ fontWeight: 500 }}>
-                      <Link href={`/customers/${o.customerId}`} className="text-[var(--text-primary)] hover:underline">
-                        {o.customer?.shopName || o.customer?.ownerName || "Customer"}
-                      </Link>
-                    </td>
-                    <td style={{ color: "var(--text-secondary)" }}>{o._count?.items || 0} items</td>
-                    <td style={{ fontWeight: 700 }}>{formatCurrency(o.totalAmount)}</td>
-                    <td style={{ color: "var(--text-secondary)" }}>{formatDate(o.createdAt)}</td>
-                    <td>
-                      <StatusBadgeSelect
-                        status={o.status}
-                        onChange={(newStatus) => updateStatus.mutate({ id: o.id, status: newStatus })}
-                        disabled={updateStatus.isPending}
-                      />
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                orders.map((o: Order) => {
+                  const isWholesale = o.customer?.type === "WHOLESALE";
+                  return (
+                    <tr key={o.id}>
+                      <td>
                         <Link
                           href={`/orders/${o.id}`}
-                          className="btn btn-ghost btn-sm btn-icon"
-                          title="View Details"
+                          className="text-[var(--brand-600)] hover:underline"
+                          style={{ fontWeight: 700 }}
                         >
-                          <Eye size={14} />
+                          {o.orderNumber}
                         </Link>
-                        <button
-                          className="btn btn-ghost btn-sm btn-icon"
-                          title="Download/Print PDF"
-                          onClick={() => window.open(`/orders/${o.id}?print=true`, "_blank")}
-                        >
-                          <Download size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                        <span className={`badge ${isWholesale ? "badge-purple" : "badge-info"}`}>
+                          {isWholesale ? "Wholesale" : "Retail"}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>
+                        <Link href={`/customers/${o.customerId}`} className="text-[var(--text-primary)] hover:underline">
+                          {o.customer?.shopName || o.customer?.ownerName || "Customer"}
+                        </Link>
+                      </td>
+                      <td style={{ color: "var(--text-secondary)" }}>{o._count?.items || 0} items</td>
+                      <td style={{ fontWeight: 700 }}>{formatCurrency(o.totalAmount)}</td>
+                      <td style={{ color: "var(--text-secondary)" }}>{formatDate(o.createdAt)}</td>
+                      <td>
+                        <StatusBadgeSelect
+                          status={o.status}
+                          onChange={(newStatus) => updateStatus.mutate({ id: o.id, status: newStatus })}
+                          disabled={updateStatus.isPending}
+                        />
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                          <Link
+                            href={`/orders/${o.id}`}
+                            className="btn btn-ghost btn-sm btn-icon"
+                            title="View Details"
+                          >
+                            <Eye size={14} />
+                          </Link>
+                          <button
+                            className="btn btn-ghost btn-sm btn-icon"
+                            title="Download/Print PDF"
+                            onClick={() => window.open(`/orders/${o.id}?print=true`, "_blank")}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-state" style={{ padding: "2rem" }}>
                       <ShoppingBag size={40} />
                       <p style={{ fontWeight: 600 }}>No sales orders found</p>

@@ -14,7 +14,7 @@ import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QuickCustomerModal } from "@/components/ui/quick-customer-modal";
 
-type DocType = "INVOICE" | "ORDER" | "QUOTE";
+type DocType = "INVOICE" | "QUOTE";
 
 interface SaleForm {
   customerId: string;
@@ -157,19 +157,6 @@ function NewSaleContent() {
 
       if (docType === "QUOTE") {
         return (await api.post("/quotations", payload)).data;
-      } else if (docType === "ORDER") {
-        const orderPayload = {
-          customerId: payload.customerId,
-          notes: payload.notes,
-          items: payload.items.map((item) => ({
-            productId: item.productId,
-            variantId: item.variantId || undefined,
-            productName: item.productName,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-          })),
-        };
-        return (await api.post("/orders", orderPayload)).data;
       } else {
         return (await api.post("/invoices", payload)).data;
       }
@@ -178,9 +165,6 @@ function NewSaleContent() {
       if (docType === "QUOTE") {
         toast.success("Quotation generated successfully!");
         router.push(`/quotations/${res.id}`);
-      } else if (docType === "ORDER") {
-        toast.success("Sales order created successfully!");
-        router.push(`/orders/${res.id}`);
       } else {
         toast.success("Tax Invoice generated successfully!");
         router.push(`/invoices/${res.id}`);
@@ -254,7 +238,6 @@ function NewSaleContent() {
         >
           {[
             { type: "INVOICE", label: "Tax Invoice", Icon: Receipt },
-            { type: "ORDER", label: "Sales Order", Icon: Package },
             { type: "QUOTE", label: "Price Quote", Icon: FileText },
           ].map((item) => (
             <button
@@ -627,11 +610,9 @@ function NewSaleContent() {
                   {mutation.isPending ? (
                     "Processing..."
                   ) : docType === "QUOTE" ? (
-                    "📑 Generate Quotation"
-                  ) : docType === "ORDER" ? (
-                    "📦 Create Sales Order"
+                    "Generate Quotation"
                   ) : (
-                    "🧾 Issue Tax Invoice"
+                    "Issue Tax Invoice"
                   )}
                 </button>
               </div>

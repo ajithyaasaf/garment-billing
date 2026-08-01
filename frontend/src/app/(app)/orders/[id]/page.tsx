@@ -117,7 +117,7 @@ export default function OrderDetailPage() {
             Print
           </button>
 
-          {order.status === "PENDING" && (
+          {order.status !== "CANCELLED" && (
             <button
               className="btn btn-primary btn-sm"
               onClick={() => convertMutation.mutate()}
