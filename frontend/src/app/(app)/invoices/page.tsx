@@ -20,7 +20,7 @@ interface Invoice {
   paymentStatus: string;
   paymentMethod: string;
   invoiceDate: string;
-  customer: { shopName?: string; ownerName?: string; whatsapp: string };
+  customer: { shopName?: string; ownerName?: string; whatsapp: string; type?: string };
   _count: { items: number };
 }
 
@@ -125,6 +125,7 @@ export default function InvoicesPage() {
             <thead>
               <tr>
                 <th>Invoice #</th>
+                <th>Type</th>
                 <th>Customer</th>
                 <th>Date</th>
                 <th>Items</th>
@@ -137,18 +138,25 @@ export default function InvoicesPage() {
             </thead>
             <tbody>
               {data?.data?.length ? (
-                data.data.map((inv: Invoice) => (
-                  <tr key={inv.id}>
-                    <td>
-                      <Link href={`/invoices/${inv.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
-                        {inv.invoiceNumber}
-                      </Link>
-                    </td>
-                    <td style={{ fontWeight: 500 }}>
-                      <Link href={`/customers/${inv.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
-                        {inv.customer.shopName || inv.customer.ownerName}
-                      </Link>
-                    </td>
+                data.data.map((inv: Invoice) => {
+                  const isWholesale = inv.customer?.type === "WHOLESALE" || (Boolean(inv.customer?.shopName) && inv.customer?.type !== "RETAIL");
+                  return (
+                    <tr key={inv.id}>
+                      <td>
+                        <Link href={`/invoices/${inv.id}`} className="text-[var(--brand-600)] hover:text-blue-600 hover:underline transition-colors" style={{ fontWeight: 600 }}>
+                          {inv.invoiceNumber}
+                        </Link>
+                      </td>
+                      <td>
+                        <span className={`badge ${isWholesale ? "badge-purple" : "badge-info"}`}>
+                          {isWholesale ? "Wholesale" : "Retail"}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>
+                        <Link href={`/customers/${inv.customerId}`} className="text-[var(--text-primary)] hover:text-blue-600 hover:underline transition-colors">
+                          {inv.customer.shopName || inv.customer.ownerName}
+                        </Link>
+                      </td>
                     <td style={{ color: "var(--text-secondary)" }}>{formatDate(inv.invoiceDate)}</td>
                     <td style={{ color: "var(--text-secondary)" }}>{inv._count.items} items</td>
                     <td style={{ fontWeight: 700 }}>{formatCurrency(inv.totalAmount)}</td>
@@ -193,10 +201,11 @@ export default function InvoicesPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                );
+              })
               ) : (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={10}>
                     <div className="empty-state" style={{ padding: "2rem" }}>
                       <Receipt size={40} />
                       <p style={{ fontWeight: 600 }}>No invoices found</p>
