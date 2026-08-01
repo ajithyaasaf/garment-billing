@@ -309,6 +309,7 @@ model Invoice {
   customerId      String
   createdById     String
   orderId         String?
+  status          OrderStatus   @default(DELIVERED)
   paymentStatus   PaymentStatus @default(UNPAID)
   paymentMethod   PaymentMethod @default(CASH)
   subtotal        Float

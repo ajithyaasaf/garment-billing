@@ -453,14 +453,21 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PATCH /invoices/:id — update paymentStatus for invoice rows in orders view
+// PATCH /invoices/:id — update status / paymentStatus
 router.patch('/:id', async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
   const { status, paymentStatus } = req.body;
 
-  // Map fulfillment status to paymentStatus equivalent if needed
-  // Invoices track paymentStatus (UNPAID/PARTIAL/PAID) not fulfillment status
-  const updateData: Record<string, string> = {};
+  const updateData: Record<string, any> = {};
+
+  if (status) {
+    const allowed = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'COMPLETED'];
+    if (!allowed.includes(status)) {
+      res.status(400).json({ error: `Invalid status. Must be one of: ${allowed.join(', ')}` });
+      return;
+    }
+    updateData.status = status;
+  }
 
   if (paymentStatus) {
     const allowed = ['UNPAID', 'PARTIAL', 'PAID'];
@@ -469,24 +476,10 @@ router.patch('/:id', async (req: AuthRequest, res: Response) => {
       return;
     }
     updateData.paymentStatus = paymentStatus;
-  } else if (status) {
-    // Fulfillment status mapping: for invoices, DELIVERED = PAID, SHIPPED = PARTIAL, CANCELLED = UNPAID
-    const statusToPayment: Record<string, string> = {
-      DELIVERED: 'PAID',
-      SHIPPED: 'PARTIAL',
-      PENDING: 'UNPAID',
-      CANCELLED: 'UNPAID',
-      CONFIRMED: 'UNPAID',
-      PROCESSING: 'PARTIAL',
-    };
-    const mapped = statusToPayment[status];
-    if (!mapped) {
-      res.status(400).json({ error: `Invalid status value: ${status}` });
-      return;
-    }
-    updateData.paymentStatus = mapped;
-  } else {
-    res.status(400).json({ error: 'No valid field to update' });
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    res.status(400).json({ error: 'No valid fields provided to update' });
     return;
   }
 

@@ -91,13 +91,11 @@ export default function OrdersPage() {
     isInvoice: false,
   }));
 
-  // Map invoice paymentStatus → fulfillment status label for display
-  const paymentToStatus: Record<string, string> = { PAID: "DELIVERED", PARTIAL: "SHIPPED", UNPAID: "PENDING" };
   const rawInvoices: OrderItem[] = (invoicesData?.data || []).map((inv: any) => ({
     id: inv.id,
     orderNumber: inv.invoiceNumber,
     customerId: inv.customerId,
-    status: inv.orderStatus || paymentToStatus[inv.paymentStatus] || "PENDING",
+    status: inv.orderStatus || inv.status || "DELIVERED",
     paymentStatus: inv.paymentStatus,
     totalAmount: inv.totalAmount,
     createdAt: inv.createdAt,
