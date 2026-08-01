@@ -1,4 +1,6 @@
 import express from 'express';
+// Server entry point - updated
+import app from './app';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';

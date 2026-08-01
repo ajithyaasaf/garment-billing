@@ -260,7 +260,7 @@ export default function OrdersPage() {
               <tbody>
                 {paginatedOrders.length ? (
                   paginatedOrders.map((o: OrderItem) => {
-                    const isWholesale = o.customer?.type === "WHOLESALE";
+                    const isWholesale = o.customer?.type === "WHOLESALE" || (Boolean(o.customer?.shopName) && o.customer?.type !== "RETAIL");
                     const detailHref = o.isInvoice ? `/invoices/${o.id}` : `/orders/${o.id}`;
                     return (
                       <tr key={o.id}>
@@ -363,7 +363,7 @@ export default function OrdersPage() {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  style={{ width: "auto", padding: "0.25rem 0.5rem", fontSize: "0.8125rem" }}
+                  style={{ width: "auto", padding: "0.25rem 1.75rem 0.25rem 0.625rem", fontSize: "0.8125rem" }}
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>

@@ -35,7 +35,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       skip,
       take,
       include: {
-        customer: { select: { shopName: true, ownerName: true, whatsapp: true } },
+        customer: { select: { shopName: true, ownerName: true, whatsapp: true, type: true } },
         createdBy: { select: { name: true } },
         _count: { select: { items: true } },
       },
