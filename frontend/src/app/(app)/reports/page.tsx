@@ -337,26 +337,79 @@ export default function ReportsPage() {
       
       XLSX.writeFile(workbook, filename);
       return;
-    } else if (activeTab === "profit" && profit) {
-      filename = `Profit_Loss_Report.xlsx`;
-      headers = ["Metric", "Amount (INR)"];
-      colWidths = [{ wch: 25 }, { wch: 20 }];
-      rows = [
-        ["Total Revenue", Number(profit.revenue.toFixed(2))],
-        ["Cost of Goods Sold", Number(profit.costOfGoods.toFixed(2))],
-        ["Gross Profit", Number(profit.grossProfit.toFixed(2))],
-        ["Profit Margin (%)", `${profit.profitMargin}%`]
+    } else if (activeTab === "gst" && gstData) {
+      const workbook = XLSX.utils.book_new();
+      filename = `GSTR1_Report_${selectedYear}_${selectedMonth}.xlsx`;
+
+      // 1. Summary Sheet
+      const sumHeaders = ["Metric / Rate", "Taxable Value (INR)", "CGST (INR)", "SGST (INR)", "IGST (INR)", "Total GST (INR)"];
+      const sumRows = [
+        ["Total Summary", gstData.totals.taxable, gstData.totals.cgst, gstData.totals.sgst, gstData.totals.igst, gstData.totals.gst],
+        ...(gstData.gstBreakdown || []).map((b: any) => [
+          `${b.rate}% Slab`,
+          b.taxable,
+          Math.round((b.gst / 2) * 100) / 100,
+          Math.round((b.gst / 2) * 100) / 100,
+          0,
+          b.gst,
+        ]),
       ];
-    } else if (activeTab === "overview" && dailySales) {
-      filename = `Daily_Sales_Trend.xlsx`;
-      headers = ["Date", "Revenue (INR)", "Collected (INR)", "Invoice Count"];
-      colWidths = [{ wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }];
-      rows = dailySales.map((item: any) => [
-        item.date,
-        Number(item.revenue.toFixed(2)),
-        Number(item.collected.toFixed(2)),
-        Number(item.count)
+      const sumSheet = XLSX.utils.aoa_to_sheet([sumHeaders, ...sumRows]);
+      sumSheet["!cols"] = [{ wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(workbook, sumSheet, "GST Summary");
+
+      // 2. B2B Invoices (Table 4)
+      const b2bHeaders = ["Invoice #", "Invoice Date", "Customer Name", "Customer GSTIN", "State", "Taxable Value", "CGST", "SGST", "IGST", "Invoice Total"];
+      const b2bRows = (gstData.b2bInvoices || []).map((inv: any) => [
+        inv.invoiceNumber,
+        new Date(inv.invoiceDate).toLocaleDateString("en-IN"),
+        inv.customer,
+        inv.gstNumber,
+        inv.state,
+        inv.taxableAmount,
+        inv.cgst,
+        inv.sgst,
+        inv.igst,
+        inv.totalAmount,
       ]);
+      const b2bSheet = XLSX.utils.aoa_to_sheet([b2bHeaders, ...b2bRows]);
+      b2bSheet["!cols"] = [{ wch: 18 }, { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(workbook, b2bSheet, "B2B Sales (Table 4)");
+
+      // 3. B2C Retail Summary (Table 7)
+      const b2cHeaders = ["Place of Supply / State", "Tax Rate (%)", "Taxable Value (INR)", "CGST (INR)", "SGST (INR)", "IGST (INR)", "Total GST (INR)"];
+      const b2cRows = (gstData.b2cSummary || []).map((b: any) => [
+        b.state,
+        `${b.rate}%`,
+        b.taxable,
+        b.cgst,
+        b.sgst,
+        b.igst,
+        b.totalGst,
+      ]);
+      const b2cSheet = XLSX.utils.aoa_to_sheet([b2cHeaders, ...b2cRows]);
+      b2cSheet["!cols"] = [{ wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(workbook, b2cSheet, "B2C Sales (Table 7)");
+
+      // 4. HSN Summary (Table 12)
+      const hsnHeaders = ["HSN / SKU Code", "Product Description", "UOM", "Total Qty", "Taxable Value (INR)", "CGST (INR)", "SGST (INR)", "IGST (INR)", "Total GST (INR)"];
+      const hsnRows = (gstData.hsnSummary || []).map((h: any) => [
+        h.hsn,
+        h.name,
+        "PCS",
+        h.qty,
+        h.taxable,
+        h.cgst,
+        h.sgst,
+        h.igst,
+        h.totalGst,
+      ]);
+      const hsnSheet = XLSX.utils.aoa_to_sheet([hsnHeaders, ...hsnRows]);
+      hsnSheet["!cols"] = [{ wch: 18 }, { wch: 28 }, { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(workbook, hsnSheet, "HSN Summary (Table 12)");
+
+      XLSX.writeFile(workbook, filename);
+      return;
     } else {
       return;
     }
@@ -367,6 +420,21 @@ export default function ReportsPage() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, activeTab === "gst" ? "GST Report" : "Report Data");
     XLSX.writeFile(workbook, filename);
+  };
+
+  const handleDownloadGstr1Json = () => {
+    if (!gstData?.gstr1Json) {
+      toast.error("No GST JSON data available to export");
+      return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(gstData.gstr1Json, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `GSTR1_${selectedYear}_${String(selectedMonth).padStart(2, "0")}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    toast.success("Downloaded GSTR-1 Portal JSON File!");
   };
 
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1115,6 +1183,38 @@ export default function ReportsPage() {
             </div>
           ) : gstData && gstData.totals ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {/* Action Card for Month-End GST Return Filing */}
+              <div className="card" style={{ padding: "1.25rem 1.5rem", background: "linear-gradient(to right, rgba(59, 130, 246, 0.05), rgba(99, 102, 241, 0.05))", border: "1px solid var(--border-color)" }}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--brand-600)" }}>
+                      Month-End GSTR-1 Return Filing ({monthNames[selectedMonth - 1]} {selectedYear})
+                    </h3>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", marginTop: "0.25rem" }}>
+                      {gstData.b2bCount || 0} B2B Wholesale Invoices • {gstData.b2cCount || 0} B2C Retail Bills • {gstData.hsnSummary?.length || 0} HSN Summaries
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleExport}
+                      title="Download Multi-Tab Excel for CA & Tally"
+                    >
+                      <Download size={14} />
+                      <span>Download CA Excel (.xlsx)</span>
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={handleDownloadGstr1Json}
+                      title="Download Official JSON for gst.gov.in offline tool"
+                    >
+                      <Download size={14} />
+                      <span>Download GST Portal JSON (.json)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Totals Cards */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem" }}>
                 {[

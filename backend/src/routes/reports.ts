@@ -116,13 +116,15 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
   const invoices = await prisma.invoice.findMany({
     where: { invoiceDate: { gte: startDate, lt: endDate } },
     include: {
-      customer: { select: { shopName: true, ownerName: true, gstNumber: true, state: true } },
-      items: { select: { gstPercent: true, gstAmount: true, totalAmount: true, quantity: true } },
+      customer: { select: { shopName: true, ownerName: true, gstNumber: true, state: true, type: true } },
+      items: { select: { gstPercent: true, gstAmount: true, totalAmount: true, quantity: true, productName: true, product: { select: { sku: true } } } },
     },
     orderBy: { invoiceDate: 'asc' },
   });
 
   const gstSummary: Record<number, { rate: number; taxable: number; gst: number }> = {};
+  const hsnMap: Record<string, { hsn: string; name: string; rate: number; qty: number; taxable: number; cgst: number; sgst: number; igst: number; totalGst: number }> = {};
+  const b2cMap: Record<string, { state: string; rate: number; taxable: number; cgst: number; sgst: number; igst: number; totalGst: number }> = {};
 
   let totalTaxable = 0;
   let totalGst = 0;
@@ -130,8 +132,32 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
   let totalSgst = 0;
   let totalIgst = 0;
 
+  const b2bInvoices: any[] = [];
+
   for (const inv of invoices) {
     const isLocal = (inv.customer.state || 'Tamil Nadu').trim().toLowerCase() === businessState;
+    const invGst = inv.items.reduce((sum, item) => sum + item.gstAmount, 0);
+    const invTaxable = inv.items.reduce((sum, item) => sum + (item.totalAmount - item.gstAmount), 0);
+    const hasGstIn = Boolean(inv.customer.gstNumber && inv.customer.gstNumber.trim().length >= 10);
+
+    const b2bItem = {
+      invoiceNumber: inv.invoiceNumber,
+      invoiceDate: inv.invoiceDate,
+      customer: inv.customer.shopName || inv.customer.ownerName,
+      gstNumber: inv.customer.gstNumber || '',
+      state: inv.customer.state || 'Tamil Nadu',
+      customerType: inv.customer.type || (inv.customer.shopName ? 'WHOLESALE' : 'RETAIL'),
+      taxableAmount: Math.round(invTaxable * 100) / 100,
+      cgst: isLocal ? Math.round((invGst / 2) * 100) / 100 : 0,
+      sgst: isLocal ? Math.round((invGst / 2) * 100) / 100 : 0,
+      igst: isLocal ? 0 : Math.round(invGst * 100) / 100,
+      taxAmount: Math.round(invGst * 100) / 100,
+      totalAmount: Math.round(inv.totalAmount * 100) / 100,
+    };
+
+    if (hasGstIn) {
+      b2bInvoices.push(b2bItem);
+    }
 
     for (const item of inv.items) {
       if (!gstSummary[item.gstPercent]) {
@@ -139,24 +165,149 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
       }
 
       const itemTaxable = item.totalAmount - item.gstAmount;
+      const itemCgst = isLocal ? item.gstAmount / 2 : 0;
+      const itemSgst = isLocal ? item.gstAmount / 2 : 0;
+      const itemIgst = isLocal ? 0 : item.gstAmount;
+
       gstSummary[item.gstPercent].taxable += itemTaxable;
       gstSummary[item.gstPercent].gst += item.gstAmount;
 
       totalTaxable += itemTaxable;
       totalGst += item.gstAmount;
+      totalCgst += itemCgst;
+      totalSgst += itemSgst;
+      totalIgst += itemIgst;
 
-      if (isLocal) {
-        totalCgst += item.gstAmount / 2;
-        totalSgst += item.gstAmount / 2;
-      } else {
-        totalIgst += item.gstAmount;
+      // HSN Breakdown
+      const hsnKey = `${item.product?.sku || 'GARMENT'}-${item.gstPercent}`;
+      if (!hsnMap[hsnKey]) {
+        hsnMap[hsnKey] = {
+          hsn: item.product?.sku || 'GARMENT',
+          name: item.productName || 'Garment Item',
+          rate: item.gstPercent,
+          qty: 0,
+          taxable: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          totalGst: 0,
+        };
+      }
+      hsnMap[hsnKey].qty += item.quantity;
+      hsnMap[hsnKey].taxable += itemTaxable;
+      hsnMap[hsnKey].cgst += itemCgst;
+      hsnMap[hsnKey].sgst += itemSgst;
+      hsnMap[hsnKey].igst += itemIgst;
+      hsnMap[hsnKey].totalGst += item.gstAmount;
+
+      // B2C Summary (Retail Sales without GSTIN)
+      if (!hasGstIn) {
+        const b2cKey = `${inv.customer.state || 'Tamil Nadu'}-${item.gstPercent}`;
+        if (!b2cMap[b2cKey]) {
+          b2cMap[b2cKey] = {
+            state: inv.customer.state || 'Tamil Nadu',
+            rate: item.gstPercent,
+            taxable: 0,
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+            totalGst: 0,
+          };
+        }
+        b2cMap[b2cKey].taxable += itemTaxable;
+        b2cMap[b2cKey].cgst += itemCgst;
+        b2cMap[b2cKey].sgst += itemSgst;
+        b2cMap[b2cKey].igst += itemIgst;
+        b2cMap[b2cKey].totalGst += item.gstAmount;
       }
     }
   }
 
+  const hsnSummary = Object.values(hsnMap).map((h) => ({
+    hsn: h.hsn,
+    name: h.name,
+    rate: h.rate,
+    qty: h.qty,
+    taxable: Math.round(h.taxable * 100) / 100,
+    cgst: Math.round(h.cgst * 100) / 100,
+    sgst: Math.round(h.sgst * 100) / 100,
+    igst: Math.round(h.igst * 100) / 100,
+    totalGst: Math.round(h.totalGst * 100) / 100,
+  }));
+
+  const b2cSummary = Object.values(b2cMap).map((b) => ({
+    state: b.state,
+    rate: b.rate,
+    taxable: Math.round(b.taxable * 100) / 100,
+    cgst: Math.round(b.cgst * 100) / 100,
+    sgst: Math.round(b.sgst * 100) / 100,
+    igst: Math.round(b.igst * 100) / 100,
+    totalGst: Math.round(b.totalGst * 100) / 100,
+  }));
+
+  // GSTR-1 Official Portal JSON Schema
+  const gstr1Json = {
+    gstin: profile?.gstNumber || '33AAAAA0000A1Z5',
+    fp: `${String(month).padStart(2, '0')}${year}`,
+    version: 'GSTR1_v3.0',
+    b2b: b2bInvoices.map((inv) => ({
+      ctin: inv.gstNumber,
+      inv: [
+        {
+          inum: inv.invoiceNumber,
+          idt: new Date(inv.invoiceDate).toLocaleDateString('en-GB'),
+          val: inv.totalAmount,
+          pos: inv.state,
+          rchrg: 'N',
+          inv_typ: 'R',
+          itms: [
+            {
+              num: 1,
+              itm_det: {
+                txval: inv.taxableAmount,
+                rt: inv.cgst > 0 ? (inv.taxAmount / inv.taxableAmount) * 100 : (inv.igst / inv.taxableAmount) * 100,
+                iamt: inv.igst,
+                camt: inv.cgst,
+                samt: inv.sgst,
+                csamt: 0,
+              },
+            },
+          ],
+        },
+      ],
+    })),
+    b2cs: b2cSummary.map((b) => ({
+      sply_ty: b.igst > 0 ? 'INTER' : 'INTRA',
+      pos: b.state,
+      rt: b.rate,
+      txval: b.taxable,
+      iamt: b.igst,
+      camt: b.cgst,
+      samt: b.sgst,
+      csamt: 0,
+    })),
+    hsn: {
+      data: hsnSummary.map((h, idx) => ({
+        num: idx + 1,
+        hsn_sc: h.hsn,
+        desc: h.name,
+        uqc: 'PCS',
+        qty: h.qty,
+        val: Math.round((h.taxable + h.totalGst) * 100) / 100,
+        txval: h.taxable,
+        iamt: h.igst,
+        camt: h.cgst,
+        samt: h.sgst,
+        csamt: 0,
+      })),
+    },
+  };
+
   res.json({
     period: { month: parseInt(month as string), year: parseInt(year as string) },
     invoiceCount: invoices.length,
+    b2bCount: b2bInvoices.length,
+    b2cCount: invoices.length - b2bInvoices.length,
     totals: {
       taxable: Math.round(totalTaxable * 100) / 100,
       gst: Math.round(totalGst * 100) / 100,
@@ -164,11 +315,15 @@ router.get('/gst', async (req: AuthRequest, res: Response) => {
       sgst: Math.round(totalSgst * 100) / 100,
       igst: Math.round(totalIgst * 100) / 100,
     },
-    gstBreakdown: Object.values(gstSummary).map(item => ({
+    gstBreakdown: Object.values(gstSummary).map((item) => ({
       rate: item.rate,
       taxable: Math.round(item.taxable * 100) / 100,
       gst: Math.round(item.gst * 100) / 100,
     })),
+    b2bInvoices,
+    b2cSummary,
+    hsnSummary,
+    gstr1Json,
     invoices: invoices.map((inv) => {
       const isLocal = (inv.customer.state || 'Tamil Nadu').trim().toLowerCase() === businessState;
       const invGst = inv.items.reduce((sum, item) => sum + item.gstAmount, 0);
