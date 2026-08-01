@@ -15,9 +15,10 @@ interface OrderItem {
   orderNumber: string;
   customerId: string;
   status: string;
+  paymentStatus?: string;
   totalAmount: number;
   createdAt: string;
-  customer: { shopName?: string; ownerName?: string; type?: string };
+  customer: { shopName?: string; ownerName?: string; type?: string; whatsapp?: string };
   createdBy: { name: string };
   _count: { items: number };
   isInvoice?: boolean;
@@ -54,6 +55,22 @@ export default function OrdersPage() {
       }
       return (await api.patch(`/orders/${id}/status`, { status })).data;
     },
+    onMutate: async ({ id, status, isInvoice }) => {
+      // Optimistically update the UI immediately — no refresh needed
+      if (isInvoice) {
+        await qc.cancelQueries({ queryKey: ["invoices-orders-view"] });
+        qc.setQueryData(["invoices-orders-view"], (old: any) => {
+          if (!old?.data) return old;
+          return { ...old, data: old.data.map((inv: any) => inv.id === id ? { ...inv, orderStatus: status } : inv) };
+        });
+      } else {
+        await qc.cancelQueries({ queryKey: ["orders"] });
+        qc.setQueryData(["orders", statusFilter], (old: any) => {
+          if (!old?.data) return old;
+          return { ...old, data: old.data.map((o: any) => o.id === id ? { ...o, status } : o) };
+        });
+      }
+    },
     onSuccess: () => {
       toast.success("Status updated");
       qc.invalidateQueries({ queryKey: ["orders"] });
@@ -61,6 +78,8 @@ export default function OrdersPage() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || "Failed to update status");
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["invoices-orders-view"] });
     },
   });
 
@@ -72,11 +91,14 @@ export default function OrdersPage() {
     isInvoice: false,
   }));
 
+  // Map invoice paymentStatus → fulfillment status label for display
+  const paymentToStatus: Record<string, string> = { PAID: "DELIVERED", PARTIAL: "SHIPPED", UNPAID: "PENDING" };
   const rawInvoices: OrderItem[] = (invoicesData?.data || []).map((inv: any) => ({
     id: inv.id,
     orderNumber: inv.invoiceNumber,
     customerId: inv.customerId,
-    status: inv.orderStatus || "PENDING",
+    status: inv.orderStatus || paymentToStatus[inv.paymentStatus] || "PENDING",
+    paymentStatus: inv.paymentStatus,
     totalAmount: inv.totalAmount,
     createdAt: inv.createdAt,
     customer: inv.customer,
