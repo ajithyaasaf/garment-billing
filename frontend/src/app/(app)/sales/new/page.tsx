@@ -96,9 +96,18 @@ function NewSaleContent() {
   const watchPaid = watch("paidAmount") || 0;
   const selectedCustomerId = watch("customerId");
 
-  // Determine customer type (RETAIL vs WHOLESALE)
+  // State for 1-click Price Tier Override (Bill-Level)
+  const [priceTierOverride, setPriceTierOverride] = useState<"RETAIL" | "WHOLESALE" | null>(null);
+
+  // Determine customer & active pricing tier
   const selectedCustomerObj = customers?.data?.find((c: any) => c.id === selectedCustomerId);
-  const isRetailCustomer = selectedCustomerObj?.type === "RETAIL";
+  const activePriceTier = priceTierOverride || (selectedCustomerObj?.type === "RETAIL" ? "RETAIL" : "WHOLESALE");
+  const isRetailCustomer = activePriceTier === "RETAIL";
+
+  // Reset override when customer changes so it auto-detects the new customer's default tier
+  useEffect(() => {
+    setPriceTierOverride(null);
+  }, [selectedCustomerId]);
 
   // Fetch top 5 frequent/recommended products
   const { data: frequentProducts } = useQuery({
@@ -111,7 +120,7 @@ function NewSaleContent() {
     },
   });
 
-  // Dynamic pricing updates when customer changes
+  // Dynamic pricing updates when pricing tier or customer changes (updates ALL 20+ line items instantly!)
   useEffect(() => {
     if (watchItems && watchItems.length > 0) {
       watchItems.forEach((item, index) => {
@@ -123,7 +132,7 @@ function NewSaleContent() {
         }
       });
     }
-  }, [isRetailCustomer, selectedCustomerId, setValue]);
+  }, [isRetailCustomer, setValue]);
 
   // Math Calculations
   const subtotal = watchItems.reduce((sum, item) => {
@@ -269,16 +278,31 @@ function NewSaleContent() {
             
             {/* Customer Details Card */}
             <div className="card">
-              <div className="card-header flex justify-between items-center">
+              <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span style={{ fontWeight: 600 }}>Customer Details</span>
-                {selectedCustomerObj && (
-                  <span
-                    className={`badge ${isRetailCustomer ? "badge-warning" : "badge-info"}`}
-                    style={{ fontSize: "0.75rem", textTransform: "uppercase", fontWeight: 700 }}
-                  >
-                    {isRetailCustomer ? "🛍️ Retail Customer" : "🏢 Wholesale Buyer"}
-                  </span>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)", fontWeight: 600 }}>Bill Rates:</span>
+                  <div style={{ display: "flex", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", padding: "2px", border: "1px solid var(--border-color)" }}>
+                    <button
+                      type="button"
+                      className={`btn btn-xs ${isRetailCustomer ? "btn-primary" : "btn-ghost"}`}
+                      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.625rem" }}
+                      onClick={() => setPriceTierOverride("RETAIL")}
+                      title="Apply Retail Rates to all items"
+                    >
+                      🛍️ Retail
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-xs ${!isRetailCustomer ? "btn-primary" : "btn-ghost"}`}
+                      style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.25rem 0.625rem" }}
+                      onClick={() => setPriceTierOverride("WHOLESALE")}
+                      title="Apply Wholesale Rates to all items"
+                    >
+                      🏢 Wholesale
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="card-body">
                 <div className="form-group">
@@ -302,7 +326,7 @@ function NewSaleContent() {
                         options={
                           customers?.data?.map((c: any) => ({
                             value: c.id,
-                            label: `${c.shopName ? `${c.shopName} (${c.ownerName})` : c.ownerName} • ${c.phone}`,
+                            label: `${c.shopName ? `${c.shopName} (${c.ownerName})` : c.ownerName}${c.whatsapp ? ` • ${c.whatsapp}` : ""}`,
                             sublabel: `${c.type} • ${c.city || 'Local'}`,
                           })) || []
                         }
