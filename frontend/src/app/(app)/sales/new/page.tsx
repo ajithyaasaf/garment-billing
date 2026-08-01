@@ -361,6 +361,38 @@ function NewSaleContent() {
                                 <div style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
                                   SKU: {field.sku}
                                 </div>
+
+                                {/* Stock Warning Badge */}
+                                {(() => {
+                                  const selectedVariantId = watchItems[index]?.variantId;
+                                  const currentVariant = field.variants?.find((v) => v.id === selectedVariantId) || field.variants?.[0];
+                                  const stockCount = currentVariant?.stock ?? 0;
+                                  const isExceedingStock = qty > stockCount;
+
+                                  return (
+                                    <div style={{ marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+                                      {stockCount > 10 ? (
+                                        <span className="badge badge-success" style={{ fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}>
+                                          In Stock: {stockCount}
+                                        </span>
+                                      ) : stockCount > 0 ? (
+                                        <span className="badge badge-warning" style={{ fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}>
+                                          Low Stock: {stockCount}
+                                        </span>
+                                      ) : (
+                                        <span className="badge badge-danger" style={{ fontSize: "0.6875rem", padding: "0.125rem 0.375rem" }}>
+                                          Out of Stock
+                                        </span>
+                                      )}
+                                      {isExceedingStock && (
+                                        <span style={{ fontSize: "0.6875rem", color: "#dc2626", fontWeight: 700 }}>
+                                          Exceeds stock!
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+
                                 {field.variants && field.variants.length > 1 && (
                                   <select
                                     className="form-select form-select-sm mt-1"

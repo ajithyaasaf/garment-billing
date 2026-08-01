@@ -84,6 +84,37 @@ export function generateWhatsAppLink(phone: string, message: string): string {
   return `https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`;
 }
 
+export function openWhatsAppShare({
+  phone,
+  customerName,
+  documentType,
+  documentNumber,
+  totalAmount,
+  docUrl,
+}: {
+  phone?: string;
+  customerName?: string;
+  documentType: string;
+  documentNumber: string;
+  totalAmount: number;
+  docUrl?: string;
+}) {
+  const cleanPhone = (phone || "").replace(/\D/g, "");
+  const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  const link = docUrl || (typeof window !== "undefined" ? window.location.href : "");
+  const message = `Hello ${customerName || "Customer"}, thank you for shopping with us! Your ${documentType} #${documentNumber} for ₹${totalAmount.toFixed(
+    2
+  )} is ready. View details: ${link}`;
+
+  const targetUrl = formattedPhone
+    ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+  if (typeof window !== "undefined") {
+    window.open(targetUrl, "_blank");
+  }
+}
+
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length) + "...";

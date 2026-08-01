@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingBag, Plus, Download, Eye, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingBag, Plus, Download, Eye, Search, ChevronLeft, ChevronRight, X, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, openWhatsAppShare } from "@/lib/utils";
 import Link from "next/link";
 import { StatusBadgeSelect } from "@/components/ui/status-badge-select";
 
@@ -295,6 +295,22 @@ export default function OrdersPage() {
                         </td>
                         <td>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                            <button
+                              className="btn btn-ghost btn-sm btn-icon"
+                              title="Share via WhatsApp"
+                              style={{ color: "#10b981" }}
+                              onClick={() =>
+                                openWhatsAppShare({
+                                  customerName: o.customer?.shopName || o.customer?.ownerName,
+                                  documentType: o.isInvoice ? "Tax Invoice" : "Sales Order",
+                                  documentNumber: o.orderNumber,
+                                  totalAmount: o.totalAmount,
+                                  docUrl: `${window.location.origin}${detailHref}`,
+                                })
+                              }
+                            >
+                              <MessageCircle size={14} />
+                            </button>
                             <Link
                               href={detailHref}
                               className="btn btn-ghost btn-sm btn-icon"

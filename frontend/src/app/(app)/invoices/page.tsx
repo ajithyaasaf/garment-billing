@@ -3,10 +3,10 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2 } from "lucide-react";
+import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { formatCurrency, formatDate, getPaymentStatusBadge, debounce } from "@/lib/utils";
+import { formatCurrency, formatDate, getPaymentStatusBadge, debounce, openWhatsAppShare } from "@/lib/utils";
 import Link from "next/link";
 import { QuickPaymentModal } from "@/components/ui/quick-payment-modal";
 
@@ -191,6 +191,23 @@ export default function InvoicesPage() {
                         <Link href={`/invoices/${inv.id}/edit`} className="btn btn-ghost btn-sm btn-icon" title="Edit Invoice">
                           <Pencil size={14} />
                         </Link>
+                        <button
+                          className="btn btn-ghost btn-sm btn-icon"
+                          title="Share via WhatsApp"
+                          style={{ color: "#10b981" }}
+                          onClick={() =>
+                            openWhatsAppShare({
+                              phone: inv.customer.whatsapp,
+                              customerName: inv.customer.shopName || inv.customer.ownerName,
+                              documentType: "Tax Invoice",
+                              documentNumber: inv.invoiceNumber,
+                              totalAmount: inv.totalAmount,
+                              docUrl: `${window.location.origin}/invoices/${inv.id}`,
+                            })
+                          }
+                        >
+                          <MessageCircle size={14} />
+                        </button>
                         <button 
                           className="btn btn-ghost btn-sm btn-icon" 
                           title="Download/Print PDF"
