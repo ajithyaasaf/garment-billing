@@ -90,21 +90,26 @@ export function openWhatsAppShare({
   documentType,
   documentNumber,
   totalAmount,
-  docUrl,
+  date,
+  paymentStatus,
 }: {
   phone?: string;
   customerName?: string;
   documentType: string;
   documentNumber: string;
   totalAmount: number;
-  docUrl?: string;
+  date?: string;
+  paymentStatus?: string;
+  docUrl?: string; // kept for API compatibility but not used in message
 }) {
   const cleanPhone = (phone || "").replace(/\D/g, "");
   const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-  const link = docUrl || (typeof window !== "undefined" ? window.location.href : "");
-  const message = `Hello ${customerName || "Customer"}, thank you for shopping with us! Your ${documentType} #${documentNumber} for ₹${totalAmount.toFixed(
-    2
-  )} is ready. View details: ${link}`;
+  const formattedDate = date
+    ? new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+    : new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  const statusLine = paymentStatus === "PAID" ? "Payment: PAID ✓" : paymentStatus === "PARTIAL" ? "Payment: PARTIAL" : "Payment: PENDING";
+
+  const message = `Hello ${customerName || "Customer"},\n\nThank you for shopping with us!\n\n*${documentType}*\nInvoice No: ${documentNumber}\nDate: ${formattedDate}\nAmount: ₹${totalAmount.toFixed(2)}\n${statusLine}\n\nThank you for your business!`;
 
   const targetUrl = formattedPhone
     ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`

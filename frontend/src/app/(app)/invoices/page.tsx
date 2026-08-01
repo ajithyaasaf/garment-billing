@@ -202,7 +202,8 @@ export default function InvoicesPage() {
                               documentType: "Tax Invoice",
                               documentNumber: inv.invoiceNumber,
                               totalAmount: inv.totalAmount,
-                              docUrl: `${window.location.origin}/invoices/${inv.id}`,
+                              date: inv.invoiceDate,
+                              paymentStatus: inv.paymentStatus,
                             })
                           }
                         >

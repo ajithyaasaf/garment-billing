@@ -163,7 +163,8 @@ export default function InvoiceDetailPage() {
                 documentType: "Tax Invoice",
                 documentNumber: invoice.invoiceNumber,
                 totalAmount: invoice.totalAmount,
-                docUrl: window.location.href,
+                date: invoice.invoiceDate,
+                paymentStatus: invoice.paymentStatus,
               })
             }
           >

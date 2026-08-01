@@ -305,7 +305,8 @@ export default function OrdersPage() {
                                   documentType: o.isInvoice ? "Tax Invoice" : "Sales Order",
                                   documentNumber: o.orderNumber,
                                   totalAmount: o.totalAmount,
-                                  docUrl: `${window.location.origin}${detailHref}`,
+                                  date: o.createdAt,
+                                  paymentStatus: o.paymentStatus,
                                 })
                               }
                             >
