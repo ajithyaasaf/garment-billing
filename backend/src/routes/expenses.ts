@@ -1,8 +1,9 @@
 import { Router, Response } from 'express';
 import prisma from '../lib/prisma';
-import { AuthRequest } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+router.use(authenticate);
 
 // Standard Expense Categories for Garment Business
 export const EXPENSE_CATEGORIES = [
@@ -146,6 +147,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'Amount must be a positive number' });
   }
 
+  const userId = req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ error: 'User authentication required' });
+  }
+
   try {
     const expense = await prisma.expense.create({
       data: {
@@ -155,7 +161,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         paymentMethod: paymentMethod || 'CASH',
         date: date ? new Date(date) : new Date(),
         notes: notes ? notes.trim() : null,
-        createdById: req.user!.id,
+        createdById: userId,
       },
       include: {
         createdBy: { select: { name: true, email: true } },

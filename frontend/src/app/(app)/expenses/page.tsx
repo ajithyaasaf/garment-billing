@@ -9,12 +9,9 @@ import {
   Filter,
   Trash2,
   Edit2,
-  Calendar,
-  DollarSign,
   TrendingUp,
   Tag,
   X,
-  CheckCircle2,
   Home,
   Zap,
   Users,
@@ -30,16 +27,16 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
-// Garment Shop Expense Categories
+// Garment Shop Expense Categories with icons and colors
 const EXPENSE_CATEGORIES = [
-  { id: "RENT", label: "Shop Rent", icon: Home, color: "#4f46e5" },
-  { id: "ELECTRICITY", label: "Electricity & Utilities", icon: Zap, color: "#eab308" },
-  { id: "SALARY", label: "Staff Salary / Advance", icon: Users, color: "#06b6d4" },
-  { id: "TRANSPORT", label: "Transport & Freight", icon: Truck, color: "#f97316" },
-  { id: "TEA_SNACKS", label: "Tea, Snacks & Refreshments", icon: Coffee, color: "#84cc16" },
-  { id: "PACKAGING", label: "Packaging & Bags", icon: Package, color: "#ec4899" },
-  { id: "MAINTENANCE", label: "Repair & Maintenance", icon: Wrench, color: "#64748b" },
-  { id: "MISC", label: "Miscellaneous", icon: MoreHorizontal, color: "#a855f7" },
+  { id: "RENT", label: "Shop Rent", icon: Home, color: "#4f46e5", bg: "rgba(79, 70, 229, 0.1)", defaultTitle: "August Month Shop Rent" },
+  { id: "ELECTRICITY", label: "Electricity & Bills", icon: Zap, color: "#d97706", bg: "rgba(217, 119, 6, 0.1)", defaultTitle: "EB / Electricity Bill" },
+  { id: "SALARY", label: "Staff Salary / Advance", icon: Users, color: "#0891b2", bg: "rgba(8, 145, 178, 0.1)", defaultTitle: "Staff Salary Payout" },
+  { id: "TRANSPORT", label: "Transport & Freight", icon: Truck, color: "#ea580c", bg: "rgba(234, 88, 12, 0.1)", defaultTitle: "Tirupur Freight Charges" },
+  { id: "TEA_SNACKS", label: "Tea & Refreshments", icon: Coffee, color: "#65a30d", bg: "rgba(101, 163, 13, 0.1)", defaultTitle: "Daily Counter Tea & Snacks" },
+  { id: "PACKAGING", label: "Packaging & Bags", icon: Package, color: "#db2777", bg: "rgba(219, 39, 119, 0.1)", defaultTitle: "Garment Carry Bags & Polybags" },
+  { id: "MAINTENANCE", label: "Repair & Maintenance", icon: Wrench, color: "#475569", bg: "rgba(71, 85, 105, 0.1)", defaultTitle: "Shop Maintenance / Repairs" },
+  { id: "MISC", label: "Miscellaneous", icon: MoreHorizontal, color: "#9333ea", bg: "rgba(147, 51, 234, 0.1)", defaultTitle: "Other Shop Expense" },
 ];
 
 export default function ExpensesPage() {
@@ -84,7 +81,7 @@ export default function ExpensesPage() {
     },
   });
 
-  // Create / Update Mutation
+  // Save Mutation
   const saveMutation = useMutation({
     mutationFn: async (payload: any) => {
       if (editingExpense) {
@@ -146,6 +143,19 @@ export default function ExpensesPage() {
     setEditingExpense(null);
   };
 
+  const handleSelectCategory = (catId: string) => {
+    setFormCategory(catId);
+    if (!formTitle || EXPENSE_CATEGORIES.some((c) => c.defaultTitle === formTitle)) {
+      const found = EXPENSE_CATEGORIES.find((c) => c.id === catId);
+      if (found) setFormTitle(found.defaultTitle);
+    }
+  };
+
+  const addPresetAmount = (val: number) => {
+    const current = parseFloat(formAmount) || 0;
+    setFormAmount((current + val).toString());
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim()) {
@@ -170,7 +180,7 @@ export default function ExpensesPage() {
 
   const getCategoryMeta = (catId: string) => {
     const found = EXPENSE_CATEGORIES.find((c) => c.id === catId);
-    return found || { label: catId, icon: MoreHorizontal, color: "#64748b" };
+    return found || { label: catId, icon: MoreHorizontal, color: "#64748b", bg: "rgba(100, 116, 139, 0.1)" };
   };
 
   const expensesList = expensesData?.data || [];
@@ -178,7 +188,7 @@ export default function ExpensesPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {/* Top Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -189,13 +199,13 @@ export default function ExpensesPage() {
             Track daily shop spending, rent, staff salary, and transport freight charges
           </p>
         </div>
-        <button className="btn btn-primary" onClick={openAddModal}>
+        <button className="btn btn-primary" onClick={openAddModal} type="button">
           <Plus size={16} />
           Record Expense
         </button>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="stat-card">
           <div className="flex items-center justify-between">
@@ -254,7 +264,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      {/* Category Progress Bar */}
+      {/* Monthly Category Progress Bar */}
       {summaryData?.categoryBreakdown?.length > 0 && (
         <div className="card" style={{ padding: "1.25rem" }}>
           <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem", color: "var(--text-primary)" }}>
@@ -292,10 +302,10 @@ export default function ExpensesPage() {
         </div>
       )}
 
-      {/* Filter & Search Toolbar */}
+      {/* Search & Category Filter Toolbar */}
       <div className="card" style={{ padding: "1rem" }}>
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search Input */}
+          {/* Search Bar */}
           <div className="relative flex-1" style={{ maxWidth: "360px" }}>
             <Search
               size={16}
@@ -310,7 +320,7 @@ export default function ExpensesPage() {
             <input
               type="text"
               className="form-input"
-              placeholder="Search expenses by title or note..."
+              placeholder="Search expenses by title or notes..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -344,6 +354,7 @@ export default function ExpensesPage() {
           {/* Category Filter Pills */}
           <div className="flex flex-wrap gap-1" style={{ background: "var(--bg-tertiary)", padding: "3px", borderRadius: "0.5rem" }}>
             <button
+              type="button"
               className={`btn btn-sm ${categoryFilter === "ALL" ? "btn-primary" : "btn-ghost"}`}
               onClick={() => {
                 setCategoryFilter("ALL");
@@ -356,6 +367,7 @@ export default function ExpensesPage() {
             {EXPENSE_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
+                type="button"
                 className={`btn btn-sm ${categoryFilter === cat.id ? "btn-primary" : "btn-ghost"}`}
                 onClick={() => {
                   setCategoryFilter(cat.id);
@@ -381,7 +393,7 @@ export default function ExpensesPage() {
             <Wallet size={40} style={{ color: "var(--text-tertiary)", margin: "0 auto 1rem" }} />
             <h3 style={{ fontSize: "1rem", fontWeight: 600, color: "var(--text-primary)" }}>No expenses recorded</h3>
             <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-              Click "Record Expense" above to add your shop rent, staff salary, or transport bills.
+              Click "Record Expense" to log your shop rent, electricity, freight, or staff salary.
             </p>
           </div>
         ) : (
@@ -393,7 +405,7 @@ export default function ExpensesPage() {
                   <th>Title & Description</th>
                   <th>Category</th>
                   <th>Amount</th>
-                  <th>Payment Method</th>
+                  <th>Paid Via</th>
                   <th>Recorded By</th>
                   <th style={{ textAlign: "right" }}>Actions</th>
                 </tr>
@@ -417,16 +429,17 @@ export default function ExpensesPage() {
                         <span
                           className="badge"
                           style={{
-                            background: `${meta.color}15`,
+                            background: meta.bg,
                             color: meta.color,
                             borderColor: `${meta.color}30`,
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "0.35rem",
                             fontSize: "0.75rem",
+                            fontWeight: 600,
                           }}
                         >
-                          <IconComp size={12} />
+                          <IconComp size={13} />
                           {meta.label}
                         </span>
                       </td>
@@ -444,6 +457,7 @@ export default function ExpensesPage() {
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.375rem" }}>
                           <button
+                            type="button"
                             className="btn btn-ghost btn-sm btn-icon"
                             onClick={() => openEditModal(exp)}
                             title="Edit Expense"
@@ -451,6 +465,7 @@ export default function ExpensesPage() {
                             <Edit2 size={14} />
                           </button>
                           <button
+                            type="button"
                             className="btn btn-ghost btn-sm btn-icon"
                             style={{ color: "var(--error-600)" }}
                             onClick={() => {
@@ -481,6 +496,7 @@ export default function ExpensesPage() {
                 </div>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     className="btn btn-sm btn-secondary"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -488,6 +504,7 @@ export default function ExpensesPage() {
                     <ChevronLeft size={14} /> Previous
                   </button>
                   <button
+                    type="button"
                     className="btn btn-sm btn-secondary"
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -501,14 +518,15 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      {/* Record / Edit Expense Modal */}
+      {/* Direct Clean Modal Overlay */}
       {isModalOpen && (
         <div
+          onClick={closeModal}
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 50,
-            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.65)",
             backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
@@ -517,56 +535,96 @@ export default function ExpensesPage() {
           }}
         >
           <div
-            className="card"
+            onClick={(e) => e.stopPropagation()}
             style={{
               width: "100%",
-              maxWidth: "480px",
-              padding: "1.5rem",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)",
+              maxWidth: "520px",
+              background: "var(--bg-secondary)",
+              borderRadius: "0.75rem",
+              border: "1px solid var(--border-color)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
             }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h2 style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "1rem 1.25rem",
+                borderBottom: "1px solid var(--border-color)",
+              }}
+            >
+              <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-primary)" }}>
+                <Wallet size={20} style={{ color: "var(--brand-600)" }} />
                 {editingExpense ? "Edit Expense" : "Record New Expense"}
               </h2>
               <button
                 type="button"
                 onClick={closeModal}
                 className="btn btn-ghost btn-sm btn-icon"
+                style={{ borderRadius: "50%", padding: "0.25rem" }}
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div>
-                <label className="form-label">Expense Title *</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. August Month Shop Rent, Freight for Stock"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.25rem" }}>
+                {/* Visual Category Selector Cards */}
                 <div>
-                  <label className="form-label">Category *</label>
-                  <select
-                    className="form-select"
-                    value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                  >
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="form-label" style={{ marginBottom: "0.5rem", display: "block" }}>
+                    Select Expense Category *
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {EXPENSE_CATEGORIES.map((cat) => {
+                      const IconComp = cat.icon;
+                      const isSelected = formCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => handleSelectCategory(cat.id)}
+                          style={{
+                            padding: "0.5rem 0.25rem",
+                            borderRadius: "0.5rem",
+                            border: `1.5px solid ${isSelected ? cat.color : "var(--border-color)"}`,
+                            background: isSelected ? cat.bg : "var(--bg-tertiary)",
+                            color: isSelected ? cat.color : "var(--text-secondary)",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.25rem",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            textAlign: "center",
+                          }}
+                        >
+                          <IconComp size={16} />
+                          <span style={{ fontSize: "0.6875rem", fontWeight: isSelected ? 700 : 500, lineHeight: 1.1 }}>
+                            {cat.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                {/* Expense Title */}
+                <div>
+                  <label className="form-label">Expense Title / Particulars *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="e.g. August Shop Rent, Tirupur Freight Parcel"
+                    value={formTitle}
+                    onChange={(e) => setFormTitle(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {/* Amount & Quick Preset Buttons */}
                 <div>
                   <label className="form-label">Amount (₹) *</label>
                   <input
@@ -576,58 +634,80 @@ export default function ExpensesPage() {
                     placeholder="0.00"
                     value={formAmount}
                     onChange={(e) => setFormAmount(e.target.value)}
+                    style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--brand-600)" }}
                     required
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="form-label">Paid Via *</label>
-                  <select
-                    className="form-select"
-                    value={formPaymentMethod}
-                    onChange={(e) => setFormPaymentMethod(e.target.value)}
-                  >
-                    <option value="CASH">Cash</option>
-                    <option value="UPI">UPI (GPay / PhonePe)</option>
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CHEQUE">Cheque</option>
-                  </select>
+                  {/* Quick Amount Add Buttons */}
+                  <div className="flex gap-1.5 mt-2">
+                    {[100, 500, 1000, 5000, 10000].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        className="btn btn-xs btn-secondary"
+                        onClick={() => addPresetAmount(val)}
+                        style={{ fontSize: "0.7rem", fontWeight: 600 }}
+                      >
+                        +₹{val >= 1000 ? `${val / 1000}k` : val}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
+                {/* Paid Via & Date */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="form-label">Paid Via *</label>
+                    <select
+                      className="form-select"
+                      value={formPaymentMethod}
+                      onChange={(e) => setFormPaymentMethod(e.target.value)}
+                    >
+                      <option value="CASH">Cash</option>
+                      <option value="UPI">UPI (GPay / PhonePe)</option>
+                      <option value="BANK_TRANSFER">Bank Transfer</option>
+                      <option value="CHEQUE">Cheque</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Expense Date *</label>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={formDate}
+                      onChange={(e) => setFormDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Notes */}
                 <div>
-                  <label className="form-label">Date *</label>
-                  <input
-                    type="date"
+                  <label className="form-label">Notes / Receipt Ref (Optional)</label>
+                  <textarea
                     className="form-input"
-                    value={formDate}
-                    onChange={(e) => setFormDate(e.target.value)}
-                    required
+                    rows={2}
+                    placeholder="Add payment reference number or notes..."
+                    value={formNotes}
+                    onChange={(e) => setFormNotes(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="form-label">Notes / Description (Optional)</label>
-                <textarea
-                  className="form-input"
-                  rows={2}
-                  placeholder="Add payment reference, receipt number, or details..."
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 mt-2">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "0.5rem",
+                  padding: "1rem 1.25rem",
+                  borderTop: "1px solid var(--border-color)",
+                  background: "var(--bg-tertiary)",
+                }}
+              >
                 <button type="button" className="btn btn-secondary" onClick={closeModal}>
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={saveMutation.isPending}
-                >
+                <button type="submit" className="btn btn-primary" disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? "Saving..." : editingExpense ? "Update Expense" : "Save Expense"}
                 </button>
               </div>
