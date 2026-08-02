@@ -1,78 +1,25 @@
-name: Deploy Backend to Hugging Face Spaces
+name: Auto Deploy Backend to Hugging Face
 
 on:
   push:
     branches:
       - main
-    paths:
-      - 'backend/**'
-      - '.github/workflows/deploy-backend.yml'
 
 jobs:
   deploy:
+    name: Sync Backend to Hugging Face Space
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: 'backend/package-lock.json'
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          npm ci
-
-      # =============================================================
-      # SAFE DATABASE MIGRATION DEPLOY (PRODUCTION BEST PRACTICE)
-      # =============================================================
-      - name: Deploy Database Migrations to Neon
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          cd backend
-          npx prisma migrate deploy
-
-      - name: Install Git LFS
-        run: git lfs install
-
-      # =============================================================
-      # DEPLOY CODE TO HUGGING FACE
-      # =============================================================
-      - name: Deploy to Hugging Face Space
+      - name: Push backend directory to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # Configure Git credentials
-          git config --global user.name "ajithyaasaf"
-          git config --global user.email "ajithkannan.ag@gmail.com"
-          
-          # Clone the Hugging Face Space repository
-          git clone https://yaasaf:$HF_TOKEN@huggingface.co/spaces/yaasaf/garment-erp-backend hf-space
-          
-          # Clear existing contents of the Space repo
-          find hf-space -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
-          
-          # Copy the backend files to the Space repository
-          cp -r backend/* hf-space/
-          cp backend/.dockerignore hf-space/ 2>/dev/null || true
-          
-          # Change directory to the Space repo
-          cd hf-space
-          
-          # Stage and commit changes
-          git add .
-          
-          # Only commit and push if there are changes
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "Deploy: Sync backend from GitHub commit ${{ github.sha }}"
-            git push origin main --force
-          else
-            echo "No changes to deploy."
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git subtree split --prefix backend -b hf-deploy
+          git push https://yaasaf:${HF_TOKEN}@huggingface.co/spaces/yaasaf/garment-erp-backend hf-deploy:main --force
