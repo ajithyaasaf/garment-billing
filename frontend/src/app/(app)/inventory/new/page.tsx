@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
@@ -16,7 +16,9 @@ import {
   SLEEVE_TYPE_OPTIONS,
   GST_SLAB_OPTIONS,
   COMMON_COLORS,
-  COMMON_SIZES,
+  SIZE_GROUPS,
+  ALL_COMMON_SIZES,
+  SizeGroupKey,
 } from "@/lib/constants";
 
 interface ProductForm {
@@ -63,6 +65,19 @@ export default function NewProductPage() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "variants" });
+
+  const [activeSizeCategory, setActiveSizeCategory] = useState<SizeGroupKey>("ADULT");
+  const selectedGender = watch("gender");
+
+  useEffect(() => {
+    if (selectedGender === "BABY") {
+      setActiveSizeCategory("BABY");
+    } else if (selectedGender === "KIDS") {
+      setActiveSizeCategory("KIDS");
+    } else {
+      setActiveSizeCategory("ADULT");
+    }
+  }, [selectedGender]);
 
   const mutation = useMutation({
     mutationFn: async (data: ProductForm) => {
@@ -359,11 +374,28 @@ export default function NewProductPage() {
                   </button>
                 </div>
 
-                {/* Quick add buttons */}
-                <div style={{ marginBottom: "1rem" }}>
-                  <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>Quick add sizes:</p>
+                {/* Quick add buttons with Group Filter Tabs */}
+                <div style={{ marginBottom: "1.25rem", background: "var(--bg-tertiary)", padding: "0.875rem", borderRadius: "0.625rem", border: "1px solid var(--border-color)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.625rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Quick add sizes:</p>
+                    {/* Category Filter Pills */}
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
+                      {SIZE_GROUPS.map((group) => (
+                        <button
+                          key={group.key}
+                          type="button"
+                          className={`btn btn-xs ${activeSizeCategory === group.key ? "btn-primary" : "btn-ghost"}`}
+                          style={{ fontSize: "0.6875rem", padding: "0.2rem 0.5rem", borderRadius: "9999px" }}
+                          onClick={() => setActiveSizeCategory(group.key)}
+                        >
+                          {group.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-                    {COMMON_SIZES.map((size) => (
+                    {SIZE_GROUPS.find((g) => g.key === activeSizeCategory)?.sizes.map((size) => (
                       <button
                         key={size}
                         type="button"
@@ -371,7 +403,7 @@ export default function NewProductPage() {
                         style={{ fontSize: "0.75rem", padding: "0.25rem 0.625rem" }}
                         onClick={() => append({ color: "White", size, stock: 0, minStock: 5 })}
                       >
-                        {size}
+                        + {size}
                       </button>
                     ))}
                   </div>
@@ -414,7 +446,7 @@ export default function NewProductPage() {
                           {...register(`variants.${index}.size`, { required: true })}
                         />
                         <datalist id="sizes-list">
-                          {COMMON_SIZES.map((s) => <option key={s} value={s} />)}
+                          {ALL_COMMON_SIZES.map((s) => <option key={s} value={s} />)}
                         </datalist>
                       </div>
                       <div>

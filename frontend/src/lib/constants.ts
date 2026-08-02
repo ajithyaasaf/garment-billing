@@ -46,7 +46,32 @@ export const COMMON_COLORS = [
   "Grey",
 ];
 
-export const COMMON_SIZES = [
+// Baby sizes (Months)
+export const BABY_SIZES = [
+  "0-3M",
+  "3-6M",
+  "6-12M",
+  "12-18M",
+  "18-24M",
+] as const;
+
+// Kids sizes (Years)
+export const KIDS_SIZES = [
+  "1-2Y",
+  "2-3Y",
+  "3-4Y",
+  "4-5Y",
+  "5-6Y",
+  "6-7Y",
+  "7-8Y",
+  "8-9Y",
+  "9-10Y",
+  "11-12Y",
+  "13-14Y",
+] as const;
+
+// Adult sizes
+export const ADULT_SIZES = [
   "XS",
   "S",
   "M",
@@ -56,4 +81,21 @@ export const COMMON_SIZES = [
   "2XL",
   "3XL",
   "Free Size",
+] as const;
+
+export const SIZE_GROUPS = [
+  { key: "BABY", label: "Baby (Months)", sizes: BABY_SIZES },
+  { key: "KIDS", label: "Kids (Years)", sizes: KIDS_SIZES },
+  { key: "ADULT", label: "Adult Sizes", sizes: ADULT_SIZES },
+] as const;
+
+export type SizeGroupKey = (typeof SIZE_GROUPS)[number]["key"];
+
+// Standardized list of common sizes
+export const ALL_COMMON_SIZES = [
+  ...BABY_SIZES,
+  ...KIDS_SIZES,
+  ...ADULT_SIZES,
 ];
+
+export const COMMON_SIZES = ALL_COMMON_SIZES;
