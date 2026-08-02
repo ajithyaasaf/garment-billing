@@ -123,14 +123,30 @@ export default function SettingsPage() {
                 {[
                   { key: "city", label: "City" },
                   { key: "state", label: "State" },
-                  { key: "pincode", label: "Pincode" },
-                  { key: "phone", label: "Phone" },
-                  { key: "email", label: "Email" },
-                  { key: "gstNumber", label: "GST Number" },
+                  { key: "pincode", label: "Pincode", type: "text", inputMode: "numeric", maxLength: 6, mask: /\D/g },
+                  { key: "phone", label: "Phone", type: "tel", maxLength: 10, mask: /\D/g },
+                  { key: "email", label: "Email", type: "email" },
+                  { key: "gstNumber", label: "GST Number", maxLength: 15, uppercase: true, mask: /[^A-Z0-9]/g },
                 ].map((field) => (
                   <div key={field.key} className="form-group">
                     <label className="form-label">{field.label}</label>
-                    <input className="form-input" {...businessForm.register(field.key as any)} defaultValue={business[field.key as keyof typeof business] as string} />
+                    <input
+                      type={field.type || "text"}
+                      inputMode={field.inputMode as any}
+                      maxLength={field.maxLength}
+                      style={field.uppercase ? { textTransform: "uppercase" } : undefined}
+                      className="form-input"
+                      {...businessForm.register(field.key as any, {
+                        onChange: field.mask
+                          ? (e) => {
+                              let val = e.target.value;
+                              if (field.uppercase) val = val.toUpperCase();
+                              e.target.value = val.replace(field.mask, "");
+                            }
+                          : undefined,
+                      })}
+                      defaultValue={business[field.key as keyof typeof business] as string}
+                    />
                   </div>
                 ))}
               </div>
@@ -206,11 +222,23 @@ export default function SettingsPage() {
                       { key: "name", label: "Full Name", required: true },
                       { key: "email", label: "Email", required: true, type: "email" },
                       { key: "password", label: "Password", required: true, type: "password" },
-                      { key: "phone", label: "Phone" },
+                      { key: "phone", label: "Phone", type: "tel", maxLength: 10, mask: /\D/g },
                     ].map((field) => (
                       <div key={field.key} className="form-group">
                         <label className="form-label">{field.label} {field.required && "*"}</label>
-                        <input type={field.type || "text"} className="form-input" {...staffForm.register(field.key, { required: field.required })} />
+                        <input
+                          type={field.type || "text"}
+                          maxLength={field.maxLength}
+                          className="form-input"
+                          {...staffForm.register(field.key, {
+                            required: field.required,
+                            onChange: field.mask
+                              ? (e) => {
+                                  e.target.value = e.target.value.replace(field.mask, "");
+                                }
+                              : undefined,
+                          })}
+                        />
                       </div>
                     ))}
                     <div className="form-group">

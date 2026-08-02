@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -15,6 +15,7 @@ import { customerSchema, CustomerFormData } from "@/lib/validations/customer";
 
 export default function NewCustomerPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -58,7 +59,12 @@ export default function NewCustomerPage() {
       (await api.post("/customers", { ...data, creditLimit: Number(data.creditLimit) })).data,
     onSuccess: (customer) => {
       toast.success("Customer added successfully!");
-      router.push(`/customers/${customer.id}`);
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      if (customer?.id) {
+        router.push(`/customers/${customer.id}`);
+      } else {
+        router.push("/customers");
+      }
     },
     onError: (err: { response?: { data?: { error?: string } } }) =>
       toast.error(err.response?.data?.error || "Failed to add customer"),
@@ -164,10 +170,15 @@ export default function NewCustomerPage() {
             <div className="form-group">
               <label className="form-label">WhatsApp Number *</label>
               <input
+                type="tel"
                 className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                 placeholder="9876543210"
                 maxLength={10}
-                {...register("whatsapp")}
+                {...register("whatsapp", {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, "");
+                  },
+                })}
               />
               {errors.whatsapp && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -200,7 +211,11 @@ export default function NewCustomerPage() {
                 placeholder="33ABCDE1234F1Z5"
                 style={{ textTransform: "uppercase" }}
                 maxLength={15}
-                {...register("gstNumber")}
+                {...register("gstNumber", {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                  },
+                })}
               />
               {errors.gstNumber && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -234,7 +249,18 @@ export default function NewCustomerPage() {
             </div>
             <div className="form-group">
               <label className="form-label">Pincode</label>
-              <input className={`form-input ${errors.pincode ? "border-red-500" : ""}`} placeholder="641601" maxLength={6} {...register("pincode")} />
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`form-input ${errors.pincode ? "border-red-500" : ""}`}
+                placeholder="641601"
+                maxLength={6}
+                {...register("pincode", {
+                  onChange: (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, "");
+                  },
+                })}
+              />
               {errors.pincode && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
                   {errors.pincode.message}

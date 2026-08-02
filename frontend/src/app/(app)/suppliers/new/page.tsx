@@ -12,6 +12,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { getStateFromGst } from "@/lib/gst";
 import { supplierSchema, SupplierFormData } from "@/lib/validations/supplier";
+import { allowDigitsOnly, allowGstOnly } from "@/lib/formatters";
 
 export default function NewSupplierPage() {
   const router = useRouter();
@@ -56,7 +57,11 @@ export default function NewSupplierPage() {
       toast.success("Supplier added successfully!");
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["suppliers-list"] });
-      router.push(`/suppliers/${supplier.id}`);
+      if (supplier?.id) {
+        router.push(`/suppliers/${supplier.id}`);
+      } else {
+        router.push("/suppliers");
+      }
     },
     onError: (err: { response?: { data?: { error?: string } } }) =>
       toast.error(err.response?.data?.error || "Failed to add supplier"),
@@ -121,11 +126,7 @@ export default function NewSupplierPage() {
                 className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                 placeholder="e.g. 9876543210"
                 maxLength={10}
-                {...register("whatsapp", {
-                  onChange: (e) => {
-                    e.target.value = e.target.value.replace(/\D/g, "");
-                  },
-                })}
+                {...register("whatsapp", { onChange: allowDigitsOnly })}
               />
               {errors.whatsapp && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -158,11 +159,7 @@ export default function NewSupplierPage() {
                 placeholder="e.g. 33AAAAA0000A1Z5"
                 style={{ textTransform: "uppercase" }}
                 maxLength={15}
-                {...register("gstNumber", {
-                  onChange: (e) => {
-                    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                  },
-                })}
+                {...register("gstNumber", { onChange: allowGstOnly })}
               />
               {errors.gstNumber && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -201,11 +198,7 @@ export default function NewSupplierPage() {
                 className={`form-input ${errors.pincode ? "border-red-500" : ""}`}
                 placeholder="e.g. 641601"
                 maxLength={6}
-                {...register("pincode", {
-                  onChange: (e) => {
-                    e.target.value = e.target.value.replace(/\D/g, "");
-                  },
-                })}
+                {...register("pincode", { onChange: allowDigitsOnly })}
               />
               {errors.pincode && (
                 <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>

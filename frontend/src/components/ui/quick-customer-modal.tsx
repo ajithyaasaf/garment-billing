@@ -153,11 +153,15 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                 <div className="form-group">
                   <label className="form-label">WhatsApp Number *</label>
                   <input
-                    type="text"
+                    type="tel"
                     className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                     placeholder="e.g. 9876543210"
                     maxLength={10}
-                    {...register("whatsapp")}
+                    {...register("whatsapp", {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.replace(/\D/g, "");
+                      },
+                    })}
                   />
                   {errors.whatsapp && (
                     <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>

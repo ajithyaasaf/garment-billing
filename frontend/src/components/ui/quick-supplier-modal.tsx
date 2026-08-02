@@ -130,15 +130,19 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   )}
                 </div>
 
-                {/* WhatsApp Number */}
+                {/* WhatsApp */}
                 <div className="form-group">
                   <label className="form-label">WhatsApp Number *</label>
                   <input
-                    type="text"
+                    type="tel"
                     className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                     placeholder="e.g. 9876543210"
                     maxLength={10}
-                    {...register("whatsapp")}
+                    {...register("whatsapp", {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.replace(/\D/g, "");
+                      },
+                    })}
                   />
                   {errors.whatsapp && (
                     <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -147,16 +151,19 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   )}
                 </div>
 
-                {/* GST Number */}
+                {/* GSTIN */}
                 <div className="form-group">
                   <label className="form-label">GST Number (GSTIN)</label>
                   <input
-                    type="text"
                     className={`form-input ${errors.gstNumber ? "border-red-500" : ""}`}
                     placeholder="e.g. 33AAAAA0000A1Z5"
                     style={{ textTransform: "uppercase" }}
                     maxLength={15}
-                    {...register("gstNumber")}
+                    {...register("gstNumber", {
+                      onChange: (e) => {
+                        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                      },
+                    })}
                   />
                   {errors.gstNumber && (
                     <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -165,28 +172,38 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   )}
                 </div>
 
-                {/* City & State */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                {/* Address Fields */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
                   <div className="form-group">
                     <label className="form-label">City</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. Tiruppur"
-                      {...register("city")}
-                    />
+                    <input className="form-input" placeholder="e.g. Tiruppur" {...register("city")} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">State *</label>
-                    <input
-                      type="text"
-                      className={`form-input ${errors.state ? "border-red-500" : ""}`}
-                      placeholder="Tamil Nadu"
-                      {...register("state")}
-                    />
+                    <input className={`form-input ${errors.state ? "border-red-500" : ""}`} {...register("state")} />
                     {errors.state && (
                       <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
                         {errors.state.message}
+                      </span>
+                    )}
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Pincode</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className={`form-input ${errors.pincode ? "border-red-500" : ""}`}
+                      placeholder="641601"
+                      maxLength={6}
+                      {...register("pincode", {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/\D/g, "");
+                        },
+                      })}
+                    />
+                    {errors.pincode && (
+                      <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.pincode.message}
                       </span>
                     )}
                   </div>

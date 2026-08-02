@@ -21,6 +21,7 @@ export default function SupplierDetailPage() {
   const { data: supplier, isLoading } = useQuery({
     queryKey: ["supplier", id],
     queryFn: async () => (await api.get(`/suppliers/${id}`)).data,
+    enabled: !!id && id !== "undefined",
   });
 
   const getStatusClass = (status: string) => {
