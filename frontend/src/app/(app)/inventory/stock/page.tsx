@@ -304,7 +304,7 @@ export default function StockOperationsPage() {
                       onClick={() => handleSelectLowStock(variant)}
                       style={{
                         display: "flex",
-                        justify: "space-between",
+                        justifyContent: "space-between",
                         alignItems: "center",
                         padding: "0.75rem 1rem",
                         borderBottom: "1px solid var(--border-color)",
@@ -367,7 +367,7 @@ export default function StockOperationsPage() {
                       href={m.product?.id ? `/inventory/${m.product.id}` : "#"}
                       style={{
                         display: "flex",
-                        justify: "space-between",
+                        justifyContent: "space-between",
                         alignItems: "center",
                         padding: "0.75rem",
                         background: "var(--bg-tertiary)",
@@ -388,7 +388,7 @@ export default function StockOperationsPage() {
                             background: isInward ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)",
                             display: "flex",
                             alignItems: "center",
-                            justify: "center",
+                            justifyContent: "center",
                           }}
                         >
                           {isInward ? <ArrowUpRight size={14} color="var(--success)" /> : <ArrowDownRight size={14} color="var(--danger)" />}
