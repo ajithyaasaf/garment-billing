@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Download, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X, Pencil } from "lucide-react";
+import { ArrowLeft, Printer, Plus, Receipt, Loader2, Calendar, Phone, Landmark, X, Pencil } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -172,7 +172,7 @@ export default function InvoiceDetailPage() {
             <WhatsAppIcon size={14} /> WhatsApp Share
           </button>
           <button className="btn btn-secondary btn-sm" onClick={() => window.print()}>
-            <Download size={14} /> Print / Save PDF
+            <Printer size={14} /> Print / Save PDF
           </button>
           {invoice.dueAmount > 0 && (
             <button className="btn btn-primary btn-sm" onClick={() => {

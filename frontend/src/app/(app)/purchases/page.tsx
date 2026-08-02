@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Eye, Download } from "lucide-react";
+import { Plus, Search, Eye, Printer } from "lucide-react";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, debounce } from "@/lib/utils";
 import Link from "next/link";
@@ -138,7 +138,7 @@ export default function PurchasesPage() {
                           title="Print"
                           onClick={() => window.open(`/purchases/${bill.id}?print=true`, "_blank")}
                         >
-                          <Download size={14} />
+                          <Printer size={14} />
                         </button>
                       </div>
                     </td>

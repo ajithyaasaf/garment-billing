@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Plus, Search, Receipt, Download, Eye, Pencil, CreditCard, Check, Loader2 } from "lucide-react";
+import { Plus, Search, Receipt, Printer, Eye, Pencil, CreditCard, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, getPaymentStatusBadge, debounce, openWhatsAppShare } from "@/lib/utils";
@@ -212,10 +212,10 @@ export default function InvoicesPage() {
                         </button>
                         <button 
                           className="btn btn-ghost btn-sm btn-icon" 
-                          title="Download/Print PDF"
+                          title="Print Invoice"
                           onClick={() => window.open(`/invoices/${inv.id}?print=true`, "_blank")}
                         >
-                          <Download size={14} />
+                          <Printer size={14} />
                         </button>
                       </div>
                     </td>

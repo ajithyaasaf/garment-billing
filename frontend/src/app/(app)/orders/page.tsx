@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ShoppingBag, Plus, Download, Eye, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ShoppingBag, Plus, Printer, Eye, Search, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate, openWhatsAppShare } from "@/lib/utils";
@@ -342,10 +342,10 @@ export default function OrdersPage() {
                             </Link>
                             <button
                               className="btn btn-ghost btn-sm btn-icon"
-                              title="Download/Print PDF"
+                              title="Print Order"
                               onClick={() => window.open(`${detailHref}?print=true`, "_blank")}
                             >
-                              <Download size={14} />
+                              <Printer size={14} />
                             </button>
                           </div>
                         </td>
