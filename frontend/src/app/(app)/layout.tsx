@@ -215,7 +215,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               }}
             >
               <Plus size={16} />
-              + New Sale
+              New Sale
             </Link>
           </div>
 

@@ -227,7 +227,7 @@ function NewSaleContent() {
           </button>
           <div>
             <h1 style={{ fontSize: "1.375rem", fontWeight: 700, letterSpacing: "-0.025em" }}>
-              + New Sale
+              New Sale
             </h1>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
               Create a quote, sales order, or direct GST invoice in one place
