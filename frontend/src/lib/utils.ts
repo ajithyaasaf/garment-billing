@@ -90,6 +90,9 @@ export function openWhatsAppShare({
   documentType,
   documentNumber,
   totalAmount,
+  dueAmount,
+  upiId,
+  shopName,
   date,
   paymentStatus,
 }: {
@@ -98,18 +101,43 @@ export function openWhatsAppShare({
   documentType: string;
   documentNumber: string;
   totalAmount: number;
+  dueAmount?: number;
+  upiId?: string;
+  shopName?: string;
   date?: string;
   paymentStatus?: string;
-  docUrl?: string; // kept for API compatibility but not used in message
+  docUrl?: string;
 }) {
   const cleanPhone = (phone || "").replace(/\D/g, "");
   const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
   const formattedDate = date
     ? new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
     : new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-  const statusLine = paymentStatus === "PAID" ? "Payment: PAID ✓" : paymentStatus === "PARTIAL" ? "Payment: PARTIAL" : "Payment: PENDING";
 
-  const message = `Hello ${customerName || "Customer"},\n\nThank you for shopping with us!\n\n*${documentType}*\nInvoice No: ${documentNumber}\nDate: ${formattedDate}\nAmount: ₹${totalAmount.toFixed(2)}\n${statusLine}\n\nThank you for your business!`;
+  const amountToPay = dueAmount !== undefined ? dueAmount : totalAmount;
+  const statusLine =
+    paymentStatus === "PAID"
+      ? "Payment Status: PAID ✓"
+      : paymentStatus === "PARTIAL"
+      ? `Payment Status: PARTIAL (Balance Due: ₹${amountToPay.toFixed(2)})`
+      : `Payment Status: PENDING (Amount Due: ₹${amountToPay.toFixed(2)})`;
+
+  let message = `Hello ${customerName || "Customer"},\n\nThank you for doing business with us!\n\n*${documentType}*\nInvoice No: ${documentNumber}\nDate: ${formattedDate}\nTotal Amount: ₹${totalAmount.toFixed(2)}\n${statusLine}`;
+
+  // If unpaid/partial, include 1-click UPI Payment link for GPay/PhonePe/Paytm
+  if (paymentStatus !== "PAID" && amountToPay > 0) {
+    const activeShop = shopName || "Garment Store";
+    const cleanUpi = upiId ? upiId.trim() : "";
+    const displayUpi = cleanUpi || "pay@upi";
+
+    const upiUri = `upi://pay?pa=${encodeURIComponent(displayUpi)}&pn=${encodeURIComponent(activeShop)}&am=${amountToPay.toFixed(2)}&tr=${encodeURIComponent(documentNumber)}&tn=${encodeURIComponent("Invoice " + documentNumber)}&cu=INR`;
+
+    message += `\n\n*Pay via GPay / PhonePe / Paytm:*`;
+    message += `\n${upiUri}`;
+    message += `\n\n*UPI ID:* ${displayUpi}`;
+  }
+
+  message += `\n\nThank you for your business!`;
 
   const targetUrl = formattedPhone
     ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`

@@ -164,6 +164,9 @@ export default function InvoiceDetailPage() {
                 documentType: "Tax Invoice",
                 documentNumber: invoice.invoiceNumber,
                 totalAmount: invoice.totalAmount,
+                dueAmount: invoice.dueAmount,
+                upiId: business?.upiId,
+                shopName: business?.name,
                 date: invoice.invoiceDate,
                 paymentStatus: invoice.paymentStatus,
               })

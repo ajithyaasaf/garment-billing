@@ -38,6 +38,11 @@ export default function InvoicesPage() {
     customerName: string;
   } | null>(null);
 
+  const { data: business } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: async () => (await api.get("/settings/business")).data,
+  });
+
   const markFullPaid = useMutation({
     mutationFn: async (inv: Invoice) => {
       return (
@@ -203,6 +208,9 @@ export default function InvoicesPage() {
                               documentType: "Tax Invoice",
                               documentNumber: inv.invoiceNumber,
                               totalAmount: inv.totalAmount,
+                              dueAmount: inv.dueAmount,
+                              upiId: business?.upiId,
+                              shopName: business?.name,
                               date: inv.invoiceDate,
                               paymentStatus: inv.paymentStatus,
                             })

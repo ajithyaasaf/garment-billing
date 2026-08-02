@@ -18,6 +18,7 @@ interface OrderItem {
   status: string;
   paymentStatus?: string;
   totalAmount: number;
+  dueAmount?: number;
   createdAt: string;
   customer: { shopName?: string; ownerName?: string; type?: string; whatsapp?: string };
   createdBy: { name: string };
@@ -47,6 +48,11 @@ export default function OrdersPage() {
     queryFn: async () => {
       return (await api.get(`/invoices?limit=100`)).data;
     },
+  });
+
+  const { data: business } = useQuery({
+    queryKey: ["business-profile"],
+    queryFn: async () => (await api.get("/settings/business")).data,
   });
 
   const updateStatus = useMutation({
@@ -322,10 +328,14 @@ export default function OrdersPage() {
                               style={{ color: "#10b981" }}
                               onClick={() =>
                                 openWhatsAppShare({
+                                  phone: o.customer?.whatsapp,
                                   customerName: o.customer?.shopName || o.customer?.ownerName,
                                   documentType: o.isInvoice ? "Tax Invoice" : "Sales Order",
                                   documentNumber: o.orderNumber,
                                   totalAmount: o.totalAmount,
+                                  dueAmount: o.dueAmount,
+                                  upiId: business?.upiId,
+                                  shopName: business?.name,
                                   date: o.createdAt,
                                   paymentStatus: o.paymentStatus,
                                 })
