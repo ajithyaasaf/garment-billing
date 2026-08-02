@@ -73,6 +73,31 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
     },
     onSuccess: (newSupplier) => {
       toast.success("Supplier added successfully!");
+      // Instantly inject new supplier into active React Query caches for instant dropdown update
+      qc.setQueriesData({ queryKey: ["suppliers-list"] }, (oldData: any) => {
+        if (!oldData) return { data: [newSupplier] };
+        if (Array.isArray(oldData.data)) {
+          const exists = oldData.data.some((s: any) => s.id === newSupplier.id);
+          return exists ? oldData : { ...oldData, data: [newSupplier, ...oldData.data] };
+        }
+        if (Array.isArray(oldData)) {
+          const exists = oldData.some((s: any) => s.id === newSupplier.id);
+          return exists ? oldData : [newSupplier, ...oldData];
+        }
+        return oldData;
+      });
+      qc.setQueriesData({ queryKey: ["suppliers"] }, (oldData: any) => {
+        if (!oldData) return { data: [newSupplier] };
+        if (Array.isArray(oldData.data)) {
+          const exists = oldData.data.some((s: any) => s.id === newSupplier.id);
+          return exists ? oldData : { ...oldData, data: [newSupplier, ...oldData.data] };
+        }
+        if (Array.isArray(oldData)) {
+          const exists = oldData.some((s: any) => s.id === newSupplier.id);
+          return exists ? oldData : [newSupplier, ...oldData];
+        }
+        return oldData;
+      });
       qc.invalidateQueries({ queryKey: ["suppliers"] });
       qc.invalidateQueries({ queryKey: ["suppliers-list"] });
       onSuccess(newSupplier);

@@ -77,6 +77,31 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
     },
     onSuccess: (newCustomer) => {
       toast.success("Customer added successfully!");
+      // Instantly inject new customer into active React Query caches for instant dropdown update
+      qc.setQueriesData({ queryKey: ["customers-list"] }, (oldData: any) => {
+        if (!oldData) return { data: [newCustomer] };
+        if (Array.isArray(oldData.data)) {
+          const exists = oldData.data.some((c: any) => c.id === newCustomer.id);
+          return exists ? oldData : { ...oldData, data: [newCustomer, ...oldData.data] };
+        }
+        if (Array.isArray(oldData)) {
+          const exists = oldData.some((c: any) => c.id === newCustomer.id);
+          return exists ? oldData : [newCustomer, ...oldData];
+        }
+        return oldData;
+      });
+      qc.setQueriesData({ queryKey: ["customers"] }, (oldData: any) => {
+        if (!oldData) return { data: [newCustomer] };
+        if (Array.isArray(oldData.data)) {
+          const exists = oldData.data.some((c: any) => c.id === newCustomer.id);
+          return exists ? oldData : { ...oldData, data: [newCustomer, ...oldData.data] };
+        }
+        if (Array.isArray(oldData)) {
+          const exists = oldData.some((c: any) => c.id === newCustomer.id);
+          return exists ? oldData : [newCustomer, ...oldData];
+        }
+        return oldData;
+      });
       qc.invalidateQueries({ queryKey: ["customers"] });
       qc.invalidateQueries({ queryKey: ["customers-list"] });
       onSuccess(newCustomer);
