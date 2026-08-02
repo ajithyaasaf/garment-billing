@@ -80,6 +80,7 @@ model User {
   invoices     Invoice[]
   orders       Order[]
   purchaseBills PurchaseBill[]
+  expenses     Expense[]
 
   @@index([email])
   @@map("users")
@@ -547,5 +548,29 @@ model SequenceCounter {
   updatedAt  DateTime @updatedAt
 
   @@map("sequence_counters")
+}
+
+// ============================
+// EXPENSES
+// ============================
+
+model Expense {
+  id            String        @id @default(cuid())
+  title         String
+  category      String
+  amount        Float
+  paymentMethod PaymentMethod @default(CASH)
+  date          DateTime      @default(now())
+  notes         String?
+  createdById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  createdBy     User          @relation(fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([date])
+  @@index([createdById])
+  @@map("expenses")
 }
 

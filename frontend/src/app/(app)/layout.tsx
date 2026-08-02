@@ -23,6 +23,7 @@ import {
   Truck,
   ShoppingCart,
   Plus,
+  Wallet,
 } from "lucide-react";
 import { useAuthStore, useUIStore } from "@/store";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ const navItems = [
   { icon: FileText, label: "Quotations", href: "/quotations" },
   { icon: Receipt, label: "Invoices", href: "/invoices" },
   { icon: ShoppingCart, label: "Purchases", href: "/purchases" },
+  { icon: Wallet, label: "Expenses", href: "/expenses" },
   { icon: ShoppingBag, label: "Orders", href: "/orders" },
   { icon: BarChart3, label: "Reports", href: "/reports" },
 ];

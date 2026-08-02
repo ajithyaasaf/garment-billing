@@ -21,6 +21,7 @@ import stockRoutes from './routes/stock';
 import searchRoutes from './routes/search';
 import supplierRoutes from './routes/suppliers';
 import purchaseRoutes from './routes/purchases';
+import expenseRoutes from './routes/expenses';
 
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
@@ -59,6 +60,7 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
