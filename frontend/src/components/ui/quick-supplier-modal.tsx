@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { getStateFromGst } from "@/lib/gst";
 import { supplierSchema, SupplierFormData } from "@/lib/validations/supplier";
+import { allowDigitsOnly, allowGstOnly } from "@/lib/formatters";
 import { useEffect } from "react";
 
 interface QuickSupplierModalProps {
@@ -64,6 +65,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
         ...data,
         email: data.email ? data.email.trim() : undefined,
         gstNumber: data.gstNumber ? data.gstNumber.trim().toUpperCase() : undefined,
+        address: data.address ? data.address.trim() : undefined,
         city: data.city ? data.city.trim() : undefined,
         pincode: data.pincode ? data.pincode.trim() : undefined,
       };
@@ -86,7 +88,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay">
-          <Dialog.Content className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "500px" }}>
+          <Dialog.Content className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px" }}>
             <div className="modal-header">
               <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Quick Add Supplier</h2>
               <Dialog.Close asChild>
@@ -138,11 +140,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                     className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                     placeholder="e.g. 9876543210"
                     maxLength={10}
-                    {...register("whatsapp", {
-                      onChange: (e) => {
-                        e.target.value = e.target.value.replace(/\D/g, "");
-                      },
-                    })}
+                    {...register("whatsapp", { onChange: allowDigitsOnly })}
                   />
                   {errors.whatsapp && (
                     <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -159,11 +157,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                     placeholder="e.g. 33AAAAA0000A1Z5"
                     style={{ textTransform: "uppercase" }}
                     maxLength={15}
-                    {...register("gstNumber", {
-                      onChange: (e) => {
-                        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                      },
-                    })}
+                    {...register("gstNumber", { onChange: allowGstOnly })}
                   />
                   {errors.gstNumber && (
                     <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
@@ -172,7 +166,18 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   )}
                 </div>
 
-                {/* Address Fields */}
+                {/* Street Address */}
+                <div className="form-group">
+                  <label className="form-label">Street Address</label>
+                  <textarea
+                    className="form-input"
+                    rows={2}
+                    placeholder="Shop address, Street, Locality..."
+                    {...register("address")}
+                  />
+                </div>
+
+                {/* City, State & Pincode */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem" }}>
                   <div className="form-group">
                     <label className="form-label">City</label>
@@ -195,11 +200,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                       className={`form-input ${errors.pincode ? "border-red-500" : ""}`}
                       placeholder="641601"
                       maxLength={6}
-                      {...register("pincode", {
-                        onChange: (e) => {
-                          e.target.value = e.target.value.replace(/\D/g, "");
-                        },
-                      })}
+                      {...register("pincode", { onChange: allowDigitsOnly })}
                     />
                     {errors.pincode && (
                       <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
