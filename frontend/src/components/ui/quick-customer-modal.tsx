@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { customerSchema, CustomerFormData } from "@/lib/validations/customer";
+import { useEffect } from "react";
 
 interface QuickCustomerModalProps {
   open: boolean;
@@ -15,57 +18,61 @@ interface QuickCustomerModalProps {
 
 export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCustomerModalProps) {
   const qc = useQueryClient();
-  const [type, setType] = useState<"WHOLESALE" | "RETAIL">("WHOLESALE");
-  const [ownerName, setOwnerName] = useState("");
-  const [shopName, setShopName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("Tamil Nadu");
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      type: "WHOLESALE",
+      shopName: "",
+      ownerName: "",
+      whatsapp: "",
+      email: "",
+      gstNumber: "",
+      address: "",
+      city: "",
+      state: "Tamil Nadu",
+      pincode: "",
+      creditLimit: 0,
+      paymentTerms: "30 days",
+    },
+    mode: "onTouched",
+  });
+
+  const customerType = watch("type");
+
+  useEffect(() => {
+    if (!open) {
+      reset();
+    }
+  }, [open, reset]);
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: CustomerFormData) => {
       const payload = {
-        type,
-        ownerName,
-        shopName: type === "WHOLESALE" ? shopName : undefined,
-        whatsapp,
-        city,
-        state,
+        ...data,
+        shopName: data.type === "WHOLESALE" ? data.shopName : undefined,
       };
       return (await api.post("/customers", payload)).data;
     },
     onSuccess: (newCustomer) => {
       toast.success("Customer added successfully!");
-      // Invalidate customer queries so the select dropdown updates its options immediately
       qc.invalidateQueries({ queryKey: ["customers"] });
       qc.invalidateQueries({ queryKey: ["customers-list"] });
       onSuccess(newCustomer);
       onOpenChange(false);
-
-      // Reset form
-      setOwnerName("");
-      setShopName("");
-      setWhatsapp("");
-      setCity("");
-      setType("WHOLESALE");
+      reset();
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || "Failed to add customer");
     },
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ownerName || !whatsapp) {
-      toast.error("Please fill in required fields");
-      return;
-    }
-    if (type === "WHOLESALE" && !shopName) {
-      toast.error("Shop Name is required for wholesale customers");
-      return;
-    }
-    mutation.mutate();
-  };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -80,7 +87,7 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                 </button>
               </Dialog.Close>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
               <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.25rem 1.5rem" }}>
                 
                 {/* Customer Type Toggle */}
@@ -89,16 +96,16 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                   <div style={{ display: "flex", gap: "0.5rem" }}>
                     <button
                       type="button"
-                      className={`btn btn-sm flex-1 justify-center ${type === "WHOLESALE" ? "btn-primary" : "btn-secondary"}`}
-                      onClick={() => setType("WHOLESALE")}
+                      className={`btn btn-sm flex-1 justify-center ${customerType === "WHOLESALE" ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => setValue("type", "WHOLESALE")}
                       style={{ fontSize: "0.8125rem", fontWeight: 600 }}
                     >
                       Wholesale (B2B)
                     </button>
                     <button
                       type="button"
-                      className={`btn btn-sm flex-1 justify-center ${type === "RETAIL" ? "btn-primary" : "btn-secondary"}`}
-                      onClick={() => setType("RETAIL")}
+                      className={`btn btn-sm flex-1 justify-center ${customerType === "RETAIL" ? "btn-primary" : "btn-secondary"}`}
+                      onClick={() => setValue("type", "RETAIL")}
                       style={{ fontSize: "0.8125rem", fontWeight: 600 }}
                     >
                       Retail Customer
@@ -109,30 +116,36 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                 {/* Owner / Customer Name */}
                 <div className="form-group">
                   <label className="form-label">
-                    {type === "WHOLESALE" ? "Proprietor / Owner Name *" : "Customer Name *"}
+                    {customerType === "WHOLESALE" ? "Proprietor / Owner Name *" : "Customer Name *"}
                   </label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.ownerName ? "border-red-500" : ""}`}
                     placeholder="e.g. Ramesh Kumar"
-                    value={ownerName}
-                    onChange={(e) => setOwnerName(e.target.value)}
-                    required
+                    {...register("ownerName")}
                   />
+                  {errors.ownerName && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.ownerName.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* Shop Name (only for wholesale) */}
-                {type === "WHOLESALE" && (
+                {customerType === "WHOLESALE" && (
                   <div className="form-group">
                     <label className="form-label">Shop Name *</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${errors.shopName ? "border-red-500" : ""}`}
                       placeholder="e.g. Sri Balaji Textiles"
-                      value={shopName}
-                      onChange={(e) => setShopName(e.target.value)}
-                      required
+                      {...register("shopName")}
                     />
+                    {errors.shopName && (
+                      <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.shopName.message}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -141,12 +154,16 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                   <label className="form-label">WhatsApp Number *</label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                     placeholder="e.g. 9876543210"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    required
+                    maxLength={10}
+                    {...register("whatsapp")}
                   />
+                  {errors.whatsapp && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.whatsapp.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* Address Fields */}
@@ -157,19 +174,22 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                       type="text"
                       className="form-input"
                       placeholder="e.g. Madurai"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      {...register("city")}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">State</label>
+                    <label className="form-label">State *</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${errors.state ? "border-red-500" : ""}`}
                       placeholder="e.g. Tamil Nadu"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
+                      {...register("state")}
                     />
+                    {errors.state && (
+                      <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.state.message}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -191,7 +211,7 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={mutation.isPending || !ownerName || !whatsapp}
+                  disabled={mutation.isPending}
                   style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}
                 >
                   {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
@@ -205,3 +225,4 @@ export function QuickCustomerModal({ open, onOpenChange, onSuccess }: QuickCusto
     </Dialog.Root>
   );
 }
+

@@ -67,7 +67,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json({ ...supplier, outstandingBalance: outstanding._sum.dueAmount || 0 });
 });
 
-// Helper to sanitize supplier input
+// Helper to sanitize & validate supplier input
 function sanitizeSupplierInput(body: any) {
   const {
     shopName,
@@ -81,26 +81,56 @@ function sanitizeSupplierInput(body: any) {
     pincode,
   } = body;
 
-  if (!shopName || !ownerName || !whatsapp) {
-    throw new Error('Shop name, owner name, and WhatsApp number are required');
+  if (!shopName || typeof shopName !== 'string' || shopName.trim().length < 2) {
+    throw new Error('Shop name is required and must be at least 2 characters');
   }
 
-  let derivedState = state;
-  if (gstNumber) {
-    const autoState = getStateFromGst(gstNumber);
+  if (!ownerName || typeof ownerName !== 'string' || ownerName.trim().length < 2) {
+    throw new Error('Owner / Contact name is required and must be at least 2 characters');
+  }
+
+  const cleanWhatsapp = whatsapp ? String(whatsapp).trim() : '';
+  if (!cleanWhatsapp || !/^[6-9]\d{9}$/.test(cleanWhatsapp)) {
+    throw new Error('Valid 10-digit mobile number is required for WhatsApp');
+  }
+
+  let cleanEmail = null;
+  if (email && String(email).trim() !== '') {
+    cleanEmail = String(email).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new Error('Invalid email address format');
+    }
+  }
+
+  let cleanGst = null;
+  let derivedState = state || 'Tamil Nadu';
+  if (gstNumber && String(gstNumber).trim() !== '') {
+    cleanGst = String(gstNumber).trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      throw new Error('Invalid 15-character GSTIN format');
+    }
+    const autoState = getStateFromGst(cleanGst);
     if (autoState) derivedState = autoState;
+  }
+
+  let cleanPincode = null;
+  if (pincode && String(pincode).trim() !== '') {
+    cleanPincode = String(pincode).trim();
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      throw new Error('Pincode must be a 6-digit number');
+    }
   }
 
   return {
     shopName: shopName.trim(),
     ownerName: ownerName.trim(),
-    whatsapp: whatsapp.trim(),
-    email: email && email.trim() !== '' ? email.trim() : null,
-    gstNumber: gstNumber && gstNumber.trim() !== '' ? gstNumber.trim().toUpperCase() : null,
-    address: address && address.trim() !== '' ? address.trim() : null,
-    city: city && city.trim() !== '' ? city.trim() : null,
+    whatsapp: cleanWhatsapp,
+    email: cleanEmail,
+    gstNumber: cleanGst,
+    address: address && String(address).trim() !== '' ? String(address).trim() : null,
+    city: city && String(city).trim() !== '' ? String(city).trim() : null,
     state: derivedState,
-    pincode: pincode && pincode.trim() !== '' ? pincode.trim() : null,
+    pincode: cleanPincode,
   };
 }
 

@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { getStateFromGst } from "@/lib/gst";
+import { supplierSchema, SupplierFormData } from "@/lib/validations/supplier";
+import { useEffect } from "react";
 
 interface QuickSupplierModalProps {
   open: boolean;
@@ -16,64 +19,68 @@ interface QuickSupplierModalProps {
 
 export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSupplierModalProps) {
   const qc = useQueryClient();
-  const [shopName, setShopName] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [email, setEmail] = useState("");
-  const [gstNumber, setGstNumber] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("Tamil Nadu");
 
-  const handleGstChange = (val: string) => {
-    setGstNumber(val);
-    if (val) {
-      const derived = getStateFromGst(val);
-      if (derived) setState(derived);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: {
+      shopName: "",
+      ownerName: "",
+      whatsapp: "",
+      email: "",
+      gstNumber: "",
+      address: "",
+      city: "",
+      state: "Tamil Nadu",
+      pincode: "",
+    },
+    mode: "onTouched",
+  });
+
+  const gstNumber = watch("gstNumber");
+
+  useEffect(() => {
+    if (gstNumber) {
+      const derived = getStateFromGst(gstNumber);
+      if (derived) setValue("state", derived);
     }
-  };
+  }, [gstNumber, setValue]);
+
+  useEffect(() => {
+    if (!open) {
+      reset();
+    }
+  }, [open, reset]);
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (data: SupplierFormData) => {
       const payload = {
-        shopName,
-        ownerName,
-        whatsapp,
-        email: email ? email.trim() : undefined,
-        gstNumber: gstNumber ? gstNumber.trim() : undefined,
-        city: city ? city.trim() : undefined,
-        state,
+        ...data,
+        email: data.email ? data.email.trim() : undefined,
+        gstNumber: data.gstNumber ? data.gstNumber.trim().toUpperCase() : undefined,
+        city: data.city ? data.city.trim() : undefined,
+        pincode: data.pincode ? data.pincode.trim() : undefined,
       };
       return (await api.post("/suppliers", payload)).data;
     },
     onSuccess: (newSupplier) => {
       toast.success("Supplier added successfully!");
-      // Invalidate supplier queries so dropdowns refetch and include the new record
       qc.invalidateQueries({ queryKey: ["suppliers"] });
       qc.invalidateQueries({ queryKey: ["suppliers-list"] });
       onSuccess(newSupplier);
       onOpenChange(false);
-      // Reset form
-      setShopName("");
-      setOwnerName("");
-      setWhatsapp("");
-      setEmail("");
-      setGstNumber("");
-      setCity("");
-      setState("Tamil Nadu");
+      reset();
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || "Failed to add supplier");
     },
   });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!shopName || !ownerName || !whatsapp) {
-      toast.error("Shop name, owner name, and WhatsApp number are required");
-      return;
-    }
-    mutation.mutate();
-  };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -88,7 +95,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                 </button>
               </Dialog.Close>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
               <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1.25rem 1.5rem" }}>
                 
                 {/* Shop Name */}
@@ -96,12 +103,15 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   <label className="form-label">Shop / Firm Name *</label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.shopName ? "border-red-500" : ""}`}
                     placeholder="e.g. Tiruppur Fashion Mills"
-                    value={shopName}
-                    onChange={(e) => setShopName(e.target.value)}
-                    required
+                    {...register("shopName")}
                   />
+                  {errors.shopName && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.shopName.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* Owner Name */}
@@ -109,12 +119,15 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   <label className="form-label">Owner / Contact Name *</label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.ownerName ? "border-red-500" : ""}`}
                     placeholder="e.g. Ramesh Kumar"
-                    value={ownerName}
-                    onChange={(e) => setOwnerName(e.target.value)}
-                    required
+                    {...register("ownerName")}
                   />
+                  {errors.ownerName && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.ownerName.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* WhatsApp Number */}
@@ -122,12 +135,16 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   <label className="form-label">WhatsApp Number *</label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                     placeholder="e.g. 9876543210"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    required
+                    maxLength={10}
+                    {...register("whatsapp")}
                   />
+                  {errors.whatsapp && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.whatsapp.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* GST Number */}
@@ -135,12 +152,17 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                   <label className="form-label">GST Number (GSTIN)</label>
                   <input
                     type="text"
-                    className="form-input"
+                    className={`form-input ${errors.gstNumber ? "border-red-500" : ""}`}
                     placeholder="e.g. 33AAAAA0000A1Z5"
                     style={{ textTransform: "uppercase" }}
-                    value={gstNumber}
-                    onChange={(e) => handleGstChange(e.target.value)}
+                    maxLength={15}
+                    {...register("gstNumber")}
                   />
+                  {errors.gstNumber && (
+                    <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                      {errors.gstNumber.message}
+                    </span>
+                  )}
                 </div>
 
                 {/* City & State */}
@@ -151,19 +173,22 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                       type="text"
                       className="form-input"
                       placeholder="e.g. Tiruppur"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      {...register("city")}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">State</label>
+                    <label className="form-label">State *</label>
                     <input
                       type="text"
-                      className="form-input"
+                      className={`form-input ${errors.state ? "border-red-500" : ""}`}
                       placeholder="Tamil Nadu"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
+                      {...register("state")}
                     />
+                    {errors.state && (
+                      <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                        {errors.state.message}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -173,7 +198,6 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                 display: "flex",
                 justifyContent: "flex-end",
                 gap: "0.5rem",
-
                 padding: "1rem 1.5rem",
                 borderTop: "1px solid var(--border-color)",
                 background: "var(--bg-tertiary)",
@@ -186,7 +210,7 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={mutation.isPending || !shopName || !ownerName || !whatsapp}
+                  disabled={mutation.isPending}
                   style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}
                 >
                   {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
@@ -200,3 +224,4 @@ export function QuickSupplierModal({ open, onOpenChange, onSuccess }: QuickSuppl
     </Dialog.Root>
   );
 }
+

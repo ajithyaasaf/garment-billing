@@ -4,27 +4,14 @@ import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
 import { getStateFromGst } from "@/lib/gst";
-
-interface CustomerForm {
-  type: "WHOLESALE" | "RETAIL";
-  shopName?: string;
-  ownerName: string;
-  whatsapp: string;
-  email?: string;
-  gstNumber?: string;
-  address?: string;
-  city?: string;
-  state: string;
-  pincode?: string;
-  creditLimit: number;
-  paymentTerms?: string;
-}
+import { customerSchema, CustomerFormData } from "@/lib/validations/customer";
 
 export default function EditCustomerPage() {
   const params = useParams();
@@ -42,8 +29,23 @@ export default function EditCustomerPage() {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CustomerForm>({
-    defaultValues: { type: "WHOLESALE", state: "Tamil Nadu", creditLimit: 0, paymentTerms: "30 days" },
+  } = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      type: "WHOLESALE",
+      shopName: "",
+      ownerName: "",
+      whatsapp: "",
+      email: "",
+      gstNumber: "",
+      address: "",
+      city: "",
+      state: "Tamil Nadu",
+      pincode: "",
+      creditLimit: 0,
+      paymentTerms: "30 days",
+    },
+    mode: "onTouched",
   });
 
   const gstNumber = watch("gstNumber");
@@ -76,7 +78,7 @@ export default function EditCustomerPage() {
   }, [customer, setValue]);
 
   const mutation = useMutation({
-    mutationFn: async (data: CustomerForm) =>
+    mutationFn: async (data: CustomerFormData) =>
       (await api.put(`/customers/${id}`, { ...data, creditLimit: Number(data.creditLimit) })).data,
     onSuccess: () => {
       toast.success("Customer updated successfully!");
@@ -155,35 +157,88 @@ export default function EditCustomerPage() {
               </div>
             </div>
 
+            {/* Shop Name */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Shop Name {customerType === "WHOLESALE" ? "*" : "(optional)"}</label>
-              <input className={`form-input ${errors.shopName ? "error" : ""}`} placeholder={customerType === "WHOLESALE" ? "e.g. Murugan Dress House" : "Shop / Company Name (Optional)"}
-                {...register("shopName", { required: customerType === "WHOLESALE" ? "Shop name is required for wholesale customers" : false })} />
-              {errors.shopName && <span className="form-error">{errors.shopName.message}</span>}
+              <input
+                className={`form-input ${errors.shopName ? "border-red-500" : ""}`}
+                placeholder={customerType === "WHOLESALE" ? "e.g. Murugan Dress House" : "Shop / Company Name (Optional)"}
+                {...register("shopName")}
+              />
+              {errors.shopName && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.shopName.message}
+                </span>
+              )}
             </div>
+
+            {/* Owner Name */}
             <div className="form-group">
               <label className="form-label">{customerType === "WHOLESALE" ? "Owner Name *" : "Customer Name *"}</label>
-              <input className={`form-input ${errors.ownerName ? "error" : ""}`} placeholder={customerType === "WHOLESALE" ? "Owner full name" : "Customer full name"}
-                {...register("ownerName", { required: "Customer name is required" })} />
-              {errors.ownerName && <span className="form-error">{errors.ownerName.message}</span>}
+              <input
+                className={`form-input ${errors.ownerName ? "border-red-500" : ""}`}
+                placeholder={customerType === "WHOLESALE" ? "Owner full name" : "Customer full name"}
+                {...register("ownerName")}
+              />
+              {errors.ownerName && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.ownerName.message}
+                </span>
+              )}
             </div>
+
+            {/* WhatsApp */}
             <div className="form-group">
               <label className="form-label">WhatsApp Number *</label>
-              <input className={`form-input ${errors.whatsapp ? "error" : ""}`} placeholder="9876543210"
-                {...register("whatsapp", { required: "WhatsApp number is required" })} />
-              {errors.whatsapp && <span className="form-error">{errors.whatsapp.message}</span>}
+              <input
+                className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
+                placeholder="9876543210"
+                maxLength={10}
+                {...register("whatsapp")}
+              />
+              {errors.whatsapp && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.whatsapp.message}
+                </span>
+              )}
             </div>
+
+            {/* Email */}
             <div className="form-group">
               <label className="form-label">Email</label>
-              <input className="form-input" type="email" placeholder="shop@example.com" {...register("email")} />
+              <input
+                className={`form-input ${errors.email ? "border-red-500" : ""}`}
+                type="email"
+                placeholder="shop@example.com"
+                {...register("email")}
+              />
+              {errors.email && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.email.message}
+                </span>
+              )}
             </div>
+
+            {/* GSTIN */}
             <div className="form-group">
               <label className="form-label">GST Number</label>
-              <input className="form-input" placeholder="33ABCDE1234F1Z5" {...register("gstNumber")} />
+              <input
+                className={`form-input ${errors.gstNumber ? "border-red-500" : ""}`}
+                placeholder="33ABCDE1234F1Z5"
+                style={{ textTransform: "uppercase" }}
+                maxLength={15}
+                {...register("gstNumber")}
+              />
+              {errors.gstNumber && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.gstNumber.message}
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
 
+        {/* Address Card */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="card" style={{ marginTop: "1rem" }}>
           <div className="card-header"><span style={{ fontWeight: 600 }}>Address</span></div>
           <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -196,12 +251,22 @@ export default function EditCustomerPage() {
               <input className="form-input" placeholder="e.g. Erode" {...register("city")} />
             </div>
             <div className="form-group">
-              <label className="form-label">State</label>
-              <input className="form-input" {...register("state")} />
+              <label className="form-label">State *</label>
+              <input className={`form-input ${errors.state ? "border-red-500" : ""}`} {...register("state")} />
+              {errors.state && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.state.message}
+                </span>
+              )}
             </div>
             <div className="form-group">
               <label className="form-label">Pincode</label>
-              <input className="form-input" placeholder="641601" {...register("pincode")} />
+              <input className={`form-input ${errors.pincode ? "border-red-500" : ""}`} placeholder="641601" maxLength={6} {...register("pincode")} />
+              {errors.pincode && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.pincode.message}
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
@@ -212,7 +277,12 @@ export default function EditCustomerPage() {
             <div className="card-body grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="form-group">
                 <label className="form-label">Credit Limit (₹)</label>
-                <input type="number" min="0" className="form-input" placeholder="0" {...register("creditLimit")} />
+                <input type="number" min="0" className={`form-input ${errors.creditLimit ? "border-red-500" : ""}`} placeholder="0" {...register("creditLimit")} />
+                {errors.creditLimit && (
+                  <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                    {errors.creditLimit.message}
+                  </span>
+                )}
               </div>
               <div className="form-group">
                 <label className="form-label">Payment Terms</label>
@@ -232,7 +302,7 @@ export default function EditCustomerPage() {
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1.25rem" }}>
           <Link href={`/customers/${id}`} className="btn btn-secondary">Cancel</Link>
           <button type="submit" className="btn btn-primary" disabled={mutation.isPending}>
-            {mutation.isPending && <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} />}
+            {mutation.isPending && <Loader2 size={15} style={{ animation: "spin 1s linear infinite", marginRight: "0.5rem" }} />}
             {mutation.isPending ? "Saving..." : "Save Changes"}
           </button>
         </div>
@@ -242,3 +312,4 @@ export default function EditCustomerPage() {
     </div>
   );
 }
+

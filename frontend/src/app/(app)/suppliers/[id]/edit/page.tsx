@@ -4,24 +4,14 @@ import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
 import { getStateFromGst } from "@/lib/gst";
-
-interface SupplierForm {
-  shopName: string;
-  ownerName: string;
-  whatsapp: string;
-  email?: string;
-  gstNumber?: string;
-  address?: string;
-  city?: string;
-  state: string;
-  pincode?: string;
-}
+import { supplierSchema, SupplierFormData } from "@/lib/validations/supplier";
 
 export default function EditSupplierPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,19 +29,22 @@ export default function EditSupplierPage() {
     setValue,
     reset,
     formState: { errors },
-  } = useForm<SupplierForm>();
+  } = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierSchema),
+    mode: "onTouched",
+  });
 
   useEffect(() => {
     if (supplier) {
       reset({
-        shopName: supplier.shopName,
-        ownerName: supplier.ownerName,
-        whatsapp: supplier.whatsapp,
+        shopName: supplier.shopName || "",
+        ownerName: supplier.ownerName || "",
+        whatsapp: supplier.whatsapp || "",
         email: supplier.email || "",
         gstNumber: supplier.gstNumber || "",
         address: supplier.address || "",
         city: supplier.city || "",
-        state: supplier.state,
+        state: supplier.state || "Tamil Nadu",
         pincode: supplier.pincode || "",
       });
     }
@@ -69,12 +62,13 @@ export default function EditSupplierPage() {
   }, [gstNumber, setValue]);
 
   const mutation = useMutation({
-    mutationFn: async (data: SupplierForm) => (await api.put(`/suppliers/${id}`, data)).data,
+    mutationFn: async (data: SupplierFormData) => (await api.put(`/suppliers/${id}`, data)).data,
     onSuccess: () => {
       toast.success("Supplier updated successfully!");
       router.push(`/suppliers/${id}`);
     },
-    onError: (err: { response?: { data?: { error?: string } } }) => toast.error(err.response?.data?.error || "Failed to update supplier"),
+    onError: (err: { response?: { data?: { error?: string } } }) =>
+      toast.error(err.response?.data?.error || "Failed to update supplier"),
   });
 
   if (isLoading) {
@@ -106,36 +100,46 @@ export default function EditSupplierPage() {
             <div className="form-group">
               <label className="form-label">Shop Name *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.shopName ? "border-red-500" : ""}`}
                 placeholder="e.g. Tiruppur Fashion Mills"
-                {...register("shopName", { required: "Shop name is required" })}
+                {...register("shopName")}
               />
-              {errors.shopName && <span className="form-error">{errors.shopName.message}</span>}
+              {errors.shopName && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.shopName.message}
+                </span>
+              )}
             </div>
 
             {/* Owner Name */}
             <div className="form-group">
-              <label className="form-label">Owner/Contact Name *</label>
+              <label className="form-label">Owner / Contact Name *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.ownerName ? "border-red-500" : ""}`}
                 placeholder="e.g. Ramesh Kumar"
-                {...register("ownerName", { required: "Owner name is required" })}
+                {...register("ownerName")}
               />
-              {errors.ownerName && <span className="form-error">{errors.ownerName.message}</span>}
+              {errors.ownerName && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.ownerName.message}
+                </span>
+              )}
             </div>
 
             {/* WhatsApp */}
             <div className="form-group">
               <label className="form-label">WhatsApp Number *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.whatsapp ? "border-red-500" : ""}`}
                 placeholder="e.g. 9876543210"
-                {...register("whatsapp", {
-                  required: "WhatsApp number is required",
-                  pattern: { value: /^[0-9]{10}$/, message: "Must be a 10 digit number" },
-                })}
+                maxLength={10}
+                {...register("whatsapp")}
               />
-              {errors.whatsapp && <span className="form-error">{errors.whatsapp.message}</span>}
+              {errors.whatsapp && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.whatsapp.message}
+                </span>
+              )}
             </div>
 
             {/* Email */}
@@ -143,27 +147,35 @@ export default function EditSupplierPage() {
               <label className="form-label">Email Address</label>
               <input
                 type="email"
-                className="form-input"
+                className={`form-input ${errors.email ? "border-red-500" : ""}`}
                 placeholder="e.g. contact@supplier.com"
                 {...register("email")}
               />
+              {errors.email && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.email.message}
+                </span>
+              )}
             </div>
 
             {/* GSTIN */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">GST Number (GSTIN)</label>
               <input
-                className="form-input"
-                placeholder="33AAAAA0000A1Z5"
+                className={`form-input ${errors.gstNumber ? "border-red-500" : ""}`}
+                placeholder="e.g. 33AAAAA0000A1Z5"
                 style={{ textTransform: "uppercase" }}
-                {...register("gstNumber", {
-                  pattern: { value: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, message: "Invalid GSTIN format" }
-                })}
+                maxLength={15}
+                {...register("gstNumber")}
               />
-              {errors.gstNumber && <span className="form-error">{errors.gstNumber.message}</span>}
+              {errors.gstNumber && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.gstNumber.message}
+                </span>
+              )}
             </div>
 
-            {/* Address */}
+            {/* Street Address */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">Street Address</label>
               <textarea
@@ -188,20 +200,31 @@ export default function EditSupplierPage() {
             <div className="form-group">
               <label className="form-label">Pincode</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.pincode ? "border-red-500" : ""}`}
                 placeholder="e.g. 641601"
+                maxLength={6}
                 {...register("pincode")}
               />
+              {errors.pincode && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.pincode.message}
+                </span>
+              )}
             </div>
 
             {/* State */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label className="form-label">State</label>
+              <label className="form-label">State *</label>
               <input
-                className="form-input"
+                className={`form-input ${errors.state ? "border-red-500" : ""}`}
                 placeholder="Tamil Nadu"
                 {...register("state")}
               />
+              {errors.state && (
+                <span className="form-error" style={{ color: "#ef4444", fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
+                  {errors.state.message}
+                </span>
+              )}
             </div>
 
           </div>
@@ -220,3 +243,4 @@ export default function EditSupplierPage() {
     </div>
   );
 }
+

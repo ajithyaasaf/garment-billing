@@ -74,39 +74,100 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   res.json({ ...customer, outstandingBalance: outstanding._sum.dueAmount || 0 });
 });
 
-router.post('/', async (req: AuthRequest, res: Response) => {
-  if (req.body.gstNumber) {
-    const derivedState = getStateFromGst(req.body.gstNumber);
-    if (derivedState) {
-      req.body.state = derivedState;
+// Helper to sanitize & validate customer input
+function sanitizeCustomerInput(body: any) {
+  const {
+    type = 'WHOLESALE',
+    shopName,
+    ownerName,
+    whatsapp,
+    email,
+    gstNumber,
+    address,
+    city,
+    state = 'Tamil Nadu',
+    pincode,
+    creditLimit = 0,
+    paymentTerms = '30 days',
+  } = body;
+
+  if (type === 'WHOLESALE' && (!shopName || typeof shopName !== 'string' || shopName.trim().length < 2)) {
+    throw new Error('Shop name is required for wholesale customers');
+  }
+
+  if (!ownerName || typeof ownerName !== 'string' || ownerName.trim().length < 2) {
+    throw new Error('Owner / Customer name is required and must be at least 2 characters');
+  }
+
+  const cleanWhatsapp = whatsapp ? String(whatsapp).trim() : '';
+  if (!cleanWhatsapp || !/^[6-9]\d{9}$/.test(cleanWhatsapp)) {
+    throw new Error('Valid 10-digit mobile number is required for WhatsApp');
+  }
+
+  let cleanEmail = null;
+  if (email && String(email).trim() !== '') {
+    cleanEmail = String(email).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new Error('Invalid email address format');
     }
   }
-  // Normalize empty strings to null for optional database fields
-  if (req.body.shopName === '') req.body.shopName = null;
-  if (req.body.gstNumber === '') req.body.gstNumber = null;
-  if (req.body.email === '') req.body.email = null;
 
-  const customer = await prisma.customer.create({ data: req.body });
-  res.status(201).json(customer);
+  let cleanGst = null;
+  let derivedState = state || 'Tamil Nadu';
+  if (gstNumber && String(gstNumber).trim() !== '') {
+    cleanGst = String(gstNumber).trim().toUpperCase();
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(cleanGst)) {
+      throw new Error('Invalid 15-character GSTIN format');
+    }
+    const autoState = getStateFromGst(cleanGst);
+    if (autoState) derivedState = autoState;
+  }
+
+  let cleanPincode = null;
+  if (pincode && String(pincode).trim() !== '') {
+    cleanPincode = String(pincode).trim();
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      throw new Error('Pincode must be a 6-digit number');
+    }
+  }
+
+  return {
+    type: (type === 'RETAIL' ? 'RETAIL' : 'WHOLESALE') as 'RETAIL' | 'WHOLESALE',
+    shopName: shopName && String(shopName).trim() !== '' ? String(shopName).trim() : null,
+    ownerName: String(ownerName).trim(),
+    whatsapp: cleanWhatsapp,
+    email: cleanEmail,
+    gstNumber: cleanGst,
+    address: address && String(address).trim() !== '' ? String(address).trim() : null,
+    city: city && String(city).trim() !== '' ? String(city).trim() : null,
+    state: derivedState,
+    pincode: cleanPincode,
+    creditLimit: Number(creditLimit) || 0,
+    paymentTerms: paymentTerms ? String(paymentTerms).trim() : '30 days',
+  };
+}
+
+router.post('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = sanitizeCustomerInput(req.body);
+    const customer = await prisma.customer.create({ data });
+    res.status(201).json(customer);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to create customer' });
+  }
 });
 
 router.put('/:id', async (req: AuthRequest, res: Response) => {
-  if (req.body.gstNumber) {
-    const derivedState = getStateFromGst(req.body.gstNumber);
-    if (derivedState) {
-      req.body.state = derivedState;
-    }
+  try {
+    const data = sanitizeCustomerInput(req.body);
+    const customer = await prisma.customer.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json(customer);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update customer' });
   }
-  // Normalize empty strings to null for optional database fields
-  if (req.body.shopName === '') req.body.shopName = null;
-  if (req.body.gstNumber === '') req.body.gstNumber = null;
-  if (req.body.email === '') req.body.email = null;
-
-  const customer = await prisma.customer.update({
-    where: { id: req.params.id },
-    data: req.body,
-  });
-  res.json(customer);
 });
 
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
