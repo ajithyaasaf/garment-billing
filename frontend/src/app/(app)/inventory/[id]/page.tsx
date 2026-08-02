@@ -8,6 +8,7 @@ import { ArrowLeft, Edit, Copy, Package, Trash2, ShieldAlert, BarChart3, RotateC
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatGender } from "@/lib/constants";
 import Link from "next/link";
 
 interface Variant {
@@ -297,7 +298,7 @@ export default function ProductDetailPage() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-secondary)" }}>Gender:</span>
-                <span style={{ fontWeight: 600 }}>{product.gender}</span>
+                <span style={{ fontWeight: 600 }}>{formatGender(product.gender)}</span>
               </div>
               {product.sleeveType && (
                 <div style={{ display: "flex", justifyContent: "space-between" }}>

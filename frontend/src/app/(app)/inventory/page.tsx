@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { GENDER_OPTIONS, formatGender } from "@/lib/constants";
 
 interface Product {
   id: string;
@@ -140,10 +141,11 @@ export default function InventoryPage() {
           onChange={(e) => { setGenderFilter(e.target.value); setPage(1); }}
         >
           <option value="">All Gender</option>
-          <option value="MENS">Men's</option>
-          <option value="WOMENS">Women's</option>
-          <option value="KIDS">Kids</option>
-          <option value="UNISEX">Unisex</option>
+          {GENDER_OPTIONS.map((g) => (
+            <option key={g.value} value={g.value}>
+              {g.label}
+            </option>
+          ))}
         </select>
 
         {categories?.length > 0 && (
@@ -256,7 +258,9 @@ export default function InventoryPage() {
                     </td>
                     <td>{product.category.name}</td>
                     <td>
-                      <span className="badge badge-gray">{product.gender}</span>
+                      <span className="badge badge-gray">
+                        {formatGender(product.gender)}
+                      </span>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{formatCurrency(product.wholesalePrice)}</div>

@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QuickCategoryModal } from "@/components/ui/quick-category-modal";
+import { GENDER_OPTIONS, SLEEVE_TYPE_OPTIONS, GST_SLAB_OPTIONS } from "@/lib/constants";
 
 interface ProductForm {
   name: string;
@@ -240,10 +241,11 @@ export default function EditProductPage() {
                 <div className="form-group">
                   <label className="form-label">Gender</label>
                   <select className="form-input form-select" {...register("gender")}>
-                    <option value="MENS">Men's</option>
-                    <option value="WOMENS">Women's</option>
-                    <option value="KIDS">Kids</option>
-                    <option value="UNISEX">Unisex</option>
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g.value} value={g.value}>
+                        {g.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -251,10 +253,11 @@ export default function EditProductPage() {
                   <label className="form-label">Sleeve Type</label>
                   <select className="form-input form-select" {...register("sleeveType")}>
                     <option value="">Select type</option>
-                    <option value="Half Sleeve">Half Sleeve</option>
-                    <option value="Full Sleeve">Full Sleeve</option>
-                    <option value="Sleeveless">Sleeveless</option>
-                    <option value="3/4 Sleeve">3/4 Sleeve</option>
+                    {SLEEVE_TYPE_OPTIONS.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -318,11 +321,11 @@ export default function EditProductPage() {
                     className="form-input form-select"
                     {...register("gstPercent", { required: true })}
                   >
-                    <option value={0}>0% (Exempt)</option>
-                    <option value={5}>5%</option>
-                    <option value={12}>12%</option>
-                    <option value={18}>18%</option>
-                    <option value={28}>28%</option>
+                    {GST_SLAB_OPTIONS.map((slab) => (
+                      <option key={slab.value} value={slab.value}>
+                        {slab.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
