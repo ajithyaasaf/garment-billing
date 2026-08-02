@@ -5,11 +5,12 @@ import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickCategoryModal } from "@/components/ui/quick-category-modal";
 
 interface ProductForm {
   name: string;
@@ -30,6 +31,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState<"basic" | "pricing">("basic");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const { data: product, isLoading: isLoadingProduct } = useQuery({
     queryKey: ["product-edit", id],
@@ -192,7 +194,17 @@ export default function EditProductPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Category *</label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.375rem" }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryModalOpen(true)}
+                      className="btn btn-ghost btn-xs text-[var(--brand-600)] hover:underline"
+                      style={{ fontSize: "0.75rem", padding: "0 0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                    >
+                      <Plus size={12} /> Add Category
+                    </button>
+                  </div>
                   <Controller
                     control={control}
                     name="categoryId"
@@ -390,6 +402,12 @@ export default function EditProductPage() {
           </div>
         </div>
       </form>
+
+      <QuickCategoryModal
+        open={categoryModalOpen}
+        onOpenChange={setCategoryModalOpen}
+        onSuccess={(newCat) => setValue("categoryId", newCat.id)}
+      />
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );

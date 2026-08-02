@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { QuickCategoryModal } from "@/components/ui/quick-category-modal";
 
 interface ProductForm {
   name: string;
@@ -32,6 +33,7 @@ const COMMON_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "Free Size
 export default function NewProductPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"basic" | "pricing" | "variants">("basic");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
@@ -42,6 +44,7 @@ export default function NewProductPage() {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors },
     watch,
   } = useForm<ProductForm>({
@@ -172,7 +175,17 @@ export default function NewProductPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Category *</label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.375rem" }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Category *</label>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryModalOpen(true)}
+                      className="btn btn-ghost btn-xs text-[var(--brand-600)] hover:underline"
+                      style={{ fontSize: "0.75rem", padding: "0 0.25rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                    >
+                      <Plus size={12} /> Add Category
+                    </button>
+                  </div>
                   <Controller
                     control={control}
                     name="categoryId"
@@ -478,6 +491,12 @@ export default function NewProductPage() {
           </div>
         </div>
       </form>
+
+      <QuickCategoryModal
+        open={categoryModalOpen}
+        onOpenChange={setCategoryModalOpen}
+        onSuccess={(newCat) => setValue("categoryId", newCat.id)}
+      />
     </div>
   );
 }
