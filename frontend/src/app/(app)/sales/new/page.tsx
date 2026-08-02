@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { motion } from "framer-motion";
-import { Plus, Trash2, ArrowLeft, Search, FileText, ShoppingBag, Receipt, Sparkles, Package } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Search, FileText, ShoppingBag, Receipt, Sparkles, Package, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { formatCurrency, debounce } from "@/lib/utils";
@@ -64,7 +64,7 @@ function NewSaleContent() {
     queryFn: async () => (await api.get("/customers?limit=100")).data,
   });
 
-  const { data: productResults } = useQuery({
+  const { data: productResults, isLoading: isLoadingSearch } = useQuery({
     queryKey: ["product-search-sales", debouncedProductSearch],
     queryFn: async () => {
       if (!debouncedProductSearch) return { data: [] };
@@ -110,7 +110,7 @@ function NewSaleContent() {
   }, [selectedCustomerId]);
 
   // Fetch top 5 frequent/recommended products
-  const { data: frequentProducts } = useQuery({
+  const { data: frequentProducts, isLoading: isLoadingFrequent } = useQuery({
     queryKey: ["product-frequent-sales", selectedCustomerId],
     queryFn: async () => {
       const url = selectedCustomerId
@@ -532,7 +532,12 @@ function NewSaleContent() {
                         </div>
                       )}
 
-                      {(debouncedProductSearch.length > 1 ? productResults?.data : frequentProducts?.data)?.length ? (
+                      {(debouncedProductSearch.length > 1 ? isLoadingSearch : isLoadingFrequent) ? (
+                        <div style={{ padding: "1.25rem", textAlign: "center", color: "var(--text-secondary)", fontSize: "0.8125rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                          <Loader2 size={16} className="animate-spin text-[var(--brand-600)]" style={{ animation: "spin 1s linear infinite" }} />
+                          <span>{debouncedProductSearch.length > 1 ? "Searching products..." : "Loading recommendations..."}</span>
+                        </div>
+                      ) : (debouncedProductSearch.length > 1 ? productResults?.data : frequentProducts?.data)?.length ? (
                         (debouncedProductSearch.length > 1 ? productResults?.data : frequentProducts?.data).map((product: any) => (
                           <div
                             key={product.id}
