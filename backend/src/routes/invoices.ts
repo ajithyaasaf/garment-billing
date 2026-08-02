@@ -77,7 +77,7 @@ import { getNextSequenceNumber } from '../lib/sequence';
 router.post('/', async (req: AuthRequest, res: Response) => {
   const {
     customerId, items, discountAmount, discountPercent,
-    paymentMethod, paidAmount, notes, termsConditions, dueDate,
+    paymentMethod, paidAmount, notes, termsConditions, dueDate, status,
   } = req.body;
 
   try {
@@ -138,6 +138,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           totalAmount,
           paidAmount: paid,
           dueAmount: due,
+          status: (status || 'PENDING') as any,
           paymentStatus: paymentStatus as 'PAID' | 'PARTIAL' | 'UNPAID',
           paymentMethod: paymentMethod || 'CASH',
           notes,

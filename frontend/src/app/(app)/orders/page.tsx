@@ -102,7 +102,7 @@ export default function OrdersPage() {
     id: inv.id,
     orderNumber: inv.invoiceNumber,
     customerId: inv.customerId,
-    status: inv.orderStatus || inv.status || "DELIVERED",
+    status: inv.orderStatus || inv.status || "PENDING",
     paymentStatus: inv.paymentStatus,
     totalAmount: inv.totalAmount,
     createdAt: inv.createdAt,
