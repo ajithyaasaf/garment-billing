@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Edit, MapPin, Phone, Mail, Award, Eye, FileText, ArrowUpRight, Plus } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, generateWhatsAppLink } from "@/lib/utils";
 import Link from "next/link";
 import api from "@/lib/api";
 
@@ -100,7 +100,7 @@ export default function SupplierDetailPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", margin: "1rem 0" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem" }}>
                 <Phone size={15} color="var(--text-tertiary)" />
-                <a href={`https://wa.me/91${supplier.whatsapp}`} target="_blank" rel="noreferrer" className="text-[var(--brand-600)] hover:underline">
+                <a href={generateWhatsAppLink(supplier.whatsapp || "", `Hello ${supplier.ownerName},`)} target="_blank" rel="noreferrer" className="text-[var(--brand-600)] hover:underline">
                   {supplier.whatsapp}
                 </a>
               </div>

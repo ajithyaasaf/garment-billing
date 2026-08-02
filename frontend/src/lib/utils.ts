@@ -79,9 +79,16 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 export function generateWhatsAppLink(phone: string, message: string): string {
-  const cleaned = phone.replace(/\D/g, "");
-  const withCountry = cleaned.startsWith("91") ? cleaned : `91${cleaned}`;
-  return `https://wa.me/${withCountry}?text=${encodeURIComponent(message)}`;
+  const raw = (phone || "").replace(/\D/g, "");
+  let formattedPhone = "";
+  if (raw.length === 10) {
+    formattedPhone = `91${raw}`;
+  } else if (raw.length > 10) {
+    formattedPhone = raw;
+  }
+  return formattedPhone
+    ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
 
 export function openWhatsAppShare({
@@ -108,8 +115,14 @@ export function openWhatsAppShare({
   paymentStatus?: string;
   docUrl?: string;
 }) {
-  const cleanPhone = (phone || "").replace(/\D/g, "");
-  const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  const rawPhone = (phone || "").replace(/\D/g, "");
+  let formattedPhone = "";
+  if (rawPhone.length === 10) {
+    formattedPhone = `91${rawPhone}`;
+  } else if (rawPhone.length > 10) {
+    formattedPhone = rawPhone;
+  }
+
   const formattedDate = date
     ? new Date(date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
     : new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
@@ -140,8 +153,8 @@ export function openWhatsAppShare({
   message += `\n\nThank you for your business!`;
 
   const targetUrl = formattedPhone
-    ? `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
-    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+    ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 
   if (typeof window !== "undefined") {
     window.open(targetUrl, "_blank");
