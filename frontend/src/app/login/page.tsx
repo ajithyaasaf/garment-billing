@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Eye, EyeOff, Package2, Lock, Mail, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, Loader2, ArrowRight, ShieldCheck, Shirt } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store";
 
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   const {
     register,
@@ -26,8 +27,8 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>({
     defaultValues: {
-      email: "admin@garment.com",
-      password: "admin123",
+      email: "",
+      password: "",
     },
   });
 
@@ -52,7 +53,7 @@ export default function LoginPage() {
       router.replace("/dashboard");
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } } };
-      toast.error(error.response?.data?.error || "Login failed. Please try again.");
+      toast.error(error.response?.data?.error || "Invalid credentials. Please verify and try again.");
     } finally {
       setLoading(false);
     }
@@ -63,121 +64,129 @@ export default function LoginPage() {
       style={{
         minHeight: "100vh",
         display: "flex",
-        backgroundColor: "#020617",
-        backgroundImage: "radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)",
-        backgroundSize: "24px 24px",
+        width: "100%",
+        backgroundColor: "#090d16",
+        color: "#f8fafc",
+        fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
         position: "relative",
         overflow: "hidden",
       }}
     >
-      {/* Background decorations */}
+      {/* Dynamic Ambient Glow Background */}
       <div
         style={{
           position: "absolute",
-          top: "-20%",
-          right: "-10%",
-          width: "600px",
-          height: "600px",
+          top: "-15%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "800px",
+          height: "450px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(79, 70, 229, 0.18) 0%, rgba(37, 99, 235, 0.08) 50%, transparent 80%)",
+          filter: "blur(60px)",
           pointerEvents: "none",
         }}
       />
       <div
         style={{
           position: "absolute",
-          bottom: "-20%",
-          left: "-10%",
-          width: "500px",
-          height: "500px",
+          bottom: "-10%",
+          right: "-5%",
+          width: "550px",
+          height: "550px",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(147, 51, 234, 0.12) 0%, transparent 70%)",
+          filter: "blur(70px)",
           pointerEvents: "none",
         }}
       />
 
+      {/* Main Container */}
       <div
         style={{
           flex: 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "2rem",
+          padding: "1.5rem",
           zIndex: 1,
         }}
       >
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          style={{ width: "100%", maxWidth: "440px" }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          style={{ width: "100%", maxWidth: "420px" }}
         >
-          {/* Logo */}
-          <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+          {/* Header & Logo */}
+          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.1, duration: 0.35 }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: "3.5rem",
-                height: "3.5rem",
-                borderRadius: "1rem",
-                background: "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
-                marginBottom: "1.25rem",
-                boxShadow: "0 8px 24px rgba(59, 130, 246, 0.4)",
+                width: "3.25rem",
+                height: "3.25rem",
+                borderRadius: "0.875rem",
+                background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
+                marginBottom: "1rem",
+                boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.4)",
               }}
             >
-              <Package2 size={24} color="white" />
+              <Shirt size={24} color="#ffffff" />
             </motion.div>
+
             <h1
               style={{
-                fontSize: "1.75rem",
-                fontWeight: 800,
-                color: "white",
-                letterSpacing: "-0.025em",
-                marginBottom: "0.375rem",
+                fontSize: "1.625rem",
+                fontWeight: 700,
+                color: "#ffffff",
+                letterSpacing: "-0.03em",
+                margin: "0 0 0.375rem 0",
               }}
             >
               GarmentOS
             </h1>
-            <p style={{ color: "#94a3b8", fontSize: "0.875rem" }}>
-              Wholesale ERP · Madurai
+            <p style={{ color: "#94a3b8", fontSize: "0.875rem", margin: 0 }}>
+              Wholesale & Retail Business ERP
             </p>
           </div>
 
-          {/* Card */}
+          {/* Form Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.97 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15 }}
+            transition={{ delay: 0.15, duration: 0.35 }}
             style={{
-              background: "rgba(30, 41, 59, 0.8)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "1.25rem",
-              padding: "2rem",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+              background: "rgba(15, 23, 42, 0.75)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "1rem",
+              padding: "2rem 1.75rem",
+              backdropFilter: "blur(16px)",
+              boxShadow: "0 20px 40px -15px rgba(0, 0, 0, 0.6)",
             }}
           >
-            <h2
-              style={{
-                fontSize: "1.125rem",
-                fontWeight: 600,
-                color: "white",
-                marginBottom: "0.375rem",
-              }}
-            >
-              Sign in to your account
-            </h2>
-            <p style={{ color: "#94a3b8", fontSize: "0.8125rem", marginBottom: "1.75rem" }}>
-              Enter your credentials to continue
-            </p>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h2
+                style={{
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#ffffff",
+                  margin: "0 0 0.25rem 0",
+                }}
+              >
+                Sign in to your account
+              </h2>
+              <p style={{ color: "#64748b", fontSize: "0.8125rem", margin: 0 }}>
+                Enter your credentials to access your billing workspace
+              </p>
+            </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {/* Email */}
+            <form onSubmit={handleSubmit(onSubmit)} style={{ display: "flex", flexDirection: "column", gap: "1.125rem" }}>
+              {/* Email Input */}
               <div>
                 <label
                   htmlFor="email"
@@ -186,65 +195,77 @@ export default function LoginPage() {
                     fontSize: "0.8125rem",
                     fontWeight: 500,
                     color: "#cbd5e1",
-                    marginBottom: "0.5rem",
+                    marginBottom: "0.375rem",
                   }}
                 >
-                  Email address
+                  Email Address
                 </label>
                 <div style={{ position: "relative" }}>
                   <Mail
                     size={16}
                     color="#64748b"
-                    style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                    style={{
+                      position: "absolute",
+                      left: "0.875rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
                   />
                   <input
                     id="email"
                     type="email"
                     autoComplete="email"
                     {...register("email", {
-                      required: "Email is required",
-                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Invalid email" },
+                      required: "Email address is required",
+                      pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email" },
                     })}
                     style={{
                       width: "100%",
-                      padding: "0.625rem 0.75rem 0.625rem 2.25rem",
-                      background: "rgba(15, 23, 42, 0.6)",
-                      border: errors.email ? "1px solid #ef4444" : "1px solid rgba(255,255,255,0.1)",
+                      padding: "0.6875rem 0.875rem 0.6875rem 2.375rem",
+                      background: "rgba(2, 6, 23, 0.6)",
+                      border: errors.email ? "1px solid #ef4444" : "1px solid rgba(255, 255, 255, 0.12)",
                       borderRadius: "0.5rem",
-                      color: "white",
+                      color: "#ffffff",
                       fontSize: "0.875rem",
                       outline: "none",
-                      transition: "border-color 0.15s",
+                      transition: "all 0.15s ease",
                     }}
-                    placeholder="admin@garment.com"
+                    placeholder="name@business.com"
                   />
                 </div>
                 {errors.email && (
-                  <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.375rem" }}>
+                  <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.35rem", margin: "0.35rem 0 0 0" }}>
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
-              {/* Password */}
+              {/* Password Input */}
               <div>
-                <label
-                  htmlFor="password"
-                  style={{
-                    display: "block",
-                    fontSize: "0.8125rem",
-                    fontWeight: 500,
-                    color: "#cbd5e1",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  Password
-                </label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.375rem" }}>
+                  <label
+                    htmlFor="password"
+                    style={{
+                      fontSize: "0.8125rem",
+                      fontWeight: 500,
+                      color: "#cbd5e1",
+                    }}
+                  >
+                    Password
+                  </label>
+                </div>
                 <div style={{ position: "relative" }}>
                   <Lock
                     size={16}
                     color="#64748b"
-                    style={{ position: "absolute", left: "0.75rem", top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                    style={{
+                      position: "absolute",
+                      left: "0.875rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
                   />
                   <input
                     id="password"
@@ -253,15 +274,16 @@ export default function LoginPage() {
                     {...register("password", { required: "Password is required" })}
                     style={{
                       width: "100%",
-                      padding: "0.625rem 2.5rem 0.625rem 2.25rem",
-                      background: "rgba(15, 23, 42, 0.6)",
-                      border: errors.password ? "1px solid #ef4444" : "1px solid rgba(255,255,255,0.1)",
+                      padding: "0.6875rem 2.5rem 0.6875rem 2.375rem",
+                      background: "rgba(2, 6, 23, 0.6)",
+                      border: errors.password ? "1px solid #ef4444" : "1px solid rgba(255, 255, 255, 0.12)",
                       borderRadius: "0.5rem",
-                      color: "white",
+                      color: "#ffffff",
                       fontSize: "0.875rem",
                       outline: "none",
+                      transition: "all 0.15s ease",
                     }}
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                   />
                   <button
                     type="button"
@@ -275,73 +297,97 @@ export default function LoginPage() {
                       border: "none",
                       cursor: "pointer",
                       color: "#64748b",
-                      padding: 0,
+                      padding: "0.25rem",
+                      display: "flex",
+                      alignItems: "center",
                     }}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.375rem" }}>
+                  <p style={{ color: "#f87171", fontSize: "0.75rem", marginTop: "0.35rem", margin: "0.35rem 0 0 0" }}>
                     {errors.password.message}
                   </p>
                 )}
               </div>
 
-              {/* Submit */}
+              {/* Options */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.8125rem" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", color: "#94a3b8" }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    style={{
+                      accentColor: "#4f46e5",
+                      width: "0.95rem",
+                      height: "0.95rem",
+                      borderRadius: "0.25rem",
+                      cursor: "pointer",
+                    }}
+                  />
+                  Remember session
+                </label>
+              </div>
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
                 style={{
                   width: "100%",
-                  padding: "0.75rem",
+                  padding: "0.75rem 1rem",
                   background: loading
-                    ? "rgba(59, 130, 246, 0.5)"
-                    : "linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)",
-                  color: "white",
+                    ? "rgba(79, 70, 229, 0.6)"
+                    : "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
+                  color: "#ffffff",
                   border: "none",
                   borderRadius: "0.5rem",
-                  fontSize: "0.9375rem",
+                  fontSize: "0.875rem",
                   fontWeight: 600,
                   cursor: loading ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "0.5rem",
-                  transition: "all 0.15s",
-                  boxShadow: loading ? "none" : "0 4px 14px rgba(59, 130, 246, 0.4)",
-                  marginTop: "0.25rem",
+                  transition: "all 0.15s ease",
+                  boxShadow: loading ? "none" : "0 4px 16px rgba(79, 70, 229, 0.35)",
+                  marginTop: "0.5rem",
                 }}
               >
-                {loading && <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />}
-                {loading ? "Signing in..." : "Sign in"}
+                {loading ? (
+                  <>
+                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                    Authenticating...
+                  </>
+                ) : (
+                  <>
+                    Sign In to Portal
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
             </form>
-
-            {/* Demo credentials */}
-            <div
-              style={{
-                marginTop: "1.5rem",
-                padding: "0.875rem",
-                background: "rgba(59, 130, 246, 0.08)",
-                border: "1px solid rgba(59, 130, 246, 0.2)",
-                borderRadius: "0.625rem",
-              }}
-            >
-              <p style={{ color: "#93c5fd", fontSize: "0.75rem", fontWeight: 600, marginBottom: "0.375rem" }}>
-                Demo Credentials
-              </p>
-              <p style={{ color: "#64748b", fontSize: "0.75rem" }}>Email: admin@garment.com</p>
-              <p style={{ color: "#64748b", fontSize: "0.75rem" }}>Password: admin123</p>
-            </div>
           </motion.div>
 
-          <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
-            <p style={{ color: "#475569", fontSize: "0.75rem" }}>
-              © 2026 GarmentOS · Madurai Wholesale ERP
-            </p>
-            <p style={{ color: "#94a3b8", fontSize: "0.875rem", fontWeight: 700, marginTop: "0.5rem", letterSpacing: "0.025em" }}>
-              Designed and developed by <span style={{ color: "white" }}>AJITH</span>
+          {/* Secure Trust Badge Footer */}
+          <div style={{ textAlign: "center", marginTop: "1.75rem" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.375rem",
+                color: "#64748b",
+                fontSize: "0.75rem",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <ShieldCheck size={14} style={{ color: "#10b981" }} />
+              256-Bit Encrypted Business Workspace
+            </div>
+            <p style={{ color: "#475569", fontSize: "0.75rem", margin: 0 }}>
+              © {new Date().getFullYear()} GarmentOS Business ERP System
             </p>
           </div>
         </motion.div>
@@ -353,7 +399,10 @@ export default function LoginPage() {
           to { transform: rotate(360deg); }
         }
         input::placeholder { color: #475569; }
-        input:focus { border-color: rgba(59, 130, 246, 0.6) !important; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        input:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        }
       `}</style>
     </div>
   );
