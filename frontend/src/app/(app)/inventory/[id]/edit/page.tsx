@@ -11,6 +11,7 @@ import api from "@/lib/api";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QuickCategoryModal } from "@/components/ui/quick-category-modal";
+import { ComboboxInput } from "@/components/ui/combobox-input";
 import {
   GENDER_OPTIONS,
   SLEEVE_TYPE_OPTIONS,
@@ -478,27 +479,35 @@ export default function EditProductPage() {
                     >
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Color</label>
-                        <select
-                          className="form-input form-select"
-                          {...register(`variants.${index}.color`, { required: true })}
-                        >
-                          <option value="">Select color</option>
-                          {COMMON_COLORS.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
+                        <Controller
+                          control={control}
+                          name={`variants.${index}.color`}
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <ComboboxInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={COMMON_COLORS}
+                              placeholder="e.g. White, Dark Blue..."
+                            />
+                          )}
+                        />
                       </div>
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Size</label>
-                        <select
-                          className="form-input form-select"
-                          {...register(`variants.${index}.size`, { required: true })}
-                        >
-                          <option value="">Select size</option>
-                          {ALL_COMMON_SIZES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
+                        <Controller
+                          control={control}
+                          name={`variants.${index}.size`}
+                          rules={{ required: true }}
+                          render={({ field }) => (
+                            <ComboboxInput
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={ALL_COMMON_SIZES}
+                              placeholder="e.g. M, XL, 32..."
+                            />
+                          )}
+                        />
                       </div>
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Stock</label>
