@@ -427,27 +427,27 @@ export default function NewProductPage() {
                     >
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Color</label>
-                        <input
-                          list="colors-list"
-                          className="form-input"
-                          placeholder="Color"
+                        <select
+                          className="form-input form-select"
                           {...register(`variants.${index}.color`, { required: true })}
-                        />
-                        <datalist id="colors-list">
-                          {COMMON_COLORS.map((c) => <option key={c} value={c} />)}
-                        </datalist>
+                        >
+                          <option value="">Select color</option>
+                          {COMMON_COLORS.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Size</label>
-                        <input
-                          list="sizes-list"
-                          className="form-input"
-                          placeholder="Size"
+                        <select
+                          className="form-input form-select"
                           {...register(`variants.${index}.size`, { required: true })}
-                        />
-                        <datalist id="sizes-list">
-                          {ALL_COMMON_SIZES.map((s) => <option key={s} value={s} />)}
-                        </datalist>
+                        >
+                          <option value="">Select size</option>
+                          {ALL_COMMON_SIZES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
                       </div>
                       <div>
                         <label className="form-label" style={{ fontSize: "0.75rem" }}>Stock</label>
