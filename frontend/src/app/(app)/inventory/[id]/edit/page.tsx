@@ -540,6 +540,36 @@ export default function EditProductPage() {
                     </motion.div>
                   ))}
                 </div>
+
+                {/* Bottom Add Variant Button */}
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    width: "100%",
+                    marginTop: "0.875rem",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "0.5rem",
+                    borderStyle: "dashed",
+                    borderWidth: "1.5px",
+                    padding: "0.6875rem",
+                    fontWeight: 600,
+                  }}
+                  onClick={() => {
+                    const lastVariant = fields.length > 0 ? watch(`variants.${fields.length - 1}`) : null;
+                    append({
+                      color: lastVariant?.color || "",
+                      size: lastVariant?.size || "M",
+                      stock: 0,
+                      minStock: 5,
+                    });
+                  }}
+                >
+                  <Plus size={16} />
+                  Add Another Variant
+                </button>
               </div>
             )}
           </div>
