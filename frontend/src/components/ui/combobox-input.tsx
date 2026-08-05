@@ -13,14 +13,14 @@ interface ComboboxInputProps {
 }
 
 /**
- * ComboboxInput – best-practice hybrid input.
- * - Typing filters the suggestion list (case-insensitive).
- * - Clicking a suggestion fills the input.
- * - Any arbitrary text value is also accepted (no forced selection).
- * - Does NOT trigger form submission on selection (unlike <datalist>).
+ * ComboboxInput – hybrid select/input component.
+ * - Typing filters suggestion list (case-insensitive).
+ * - Accepts ANY custom text value (e.g. "100 CM", "Free Size", "32x34").
+ * - Shows an explicit "+ Use custom" option if the typed value isn't in options.
+ * - Does NOT trigger form submission on option click or enter.
  */
 export function ComboboxInput({
-  value,
+  value = "",
   onChange,
   options,
   placeholder,
@@ -31,19 +31,31 @@ export function ComboboxInput({
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const filtered = value
-    ? options.filter((o) => o.toLowerCase().includes(value.toLowerCase()))
+  const trimmedVal = (value || "").trim();
+  const exactMatch = options.some(
+    (o) => o.toLowerCase() === trimmedVal.toLowerCase()
+  );
+
+  let filtered = trimmedVal
+    ? options.filter((o) => o.toLowerCase().includes(trimmedVal.toLowerCase()))
     : options;
+
+  // If user typed something custom not in the list, offer it as top choice
+  const customOption =
+    trimmedVal && !exactMatch ? `Use "${trimmedVal}"` : null;
 
   const selectOption = useCallback(
     (opt: string) => {
-      onChange(opt);
+      if (opt.startsWith('Use "') && opt.endsWith('"')) {
+        onChange(trimmedVal);
+      } else {
+        onChange(opt);
+      }
       setOpen(false);
       setHighlightedIndex(-1);
     },
-    [onChange]
+    [onChange, trimmedVal]
   );
 
   // Close when clicking outside
@@ -59,23 +71,30 @@ export function ComboboxInput({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const totalCount = (customOption ? 1 : 0) + filtered.length;
+
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       setOpen(true);
       return;
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((i) => Math.min(i + 1, filtered.length - 1));
+      setHighlightedIndex((i) => Math.min(i + 1, totalCount - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightedIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
-      // Prevent form submission if a suggestion is highlighted
-      if (open && highlightedIndex >= 0 && filtered[highlightedIndex]) {
+      if (open && highlightedIndex >= 0) {
         e.preventDefault();
-        selectOption(filtered[highlightedIndex]);
+        if (customOption && highlightedIndex === 0) {
+          selectOption(customOption);
+        } else {
+          const listIdx = customOption ? highlightedIndex - 1 : highlightedIndex;
+          if (filtered[listIdx]) {
+            selectOption(filtered[listIdx]);
+          }
+        }
       } else {
-        // Let the form handle Enter normally (submit)
         setOpen(false);
       }
     } else if (e.key === "Escape") {
@@ -84,10 +103,11 @@ export function ComboboxInput({
     }
   };
 
+  const showList = open && (filtered.length > 0 || !!customOption);
+
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
       <input
-        ref={inputRef}
         id={id}
         type="text"
         className={className}
@@ -104,10 +124,9 @@ export function ComboboxInput({
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-autocomplete="list"
       />
 
-      {open && filtered.length > 0 && (
+      {showList && (
         <ul
           role="listbox"
           style={{
@@ -127,55 +146,90 @@ export function ComboboxInput({
             overflowY: "auto",
           }}
         >
-          {filtered.map((opt, idx) => (
+          {customOption && (
             <li
-              key={opt}
               role="option"
-              aria-selected={value === opt}
               onMouseDown={(e) => {
-                // Use mousedown so it fires before the input's onBlur
                 e.preventDefault();
-                selectOption(opt);
+                selectOption(customOption);
               }}
-              onMouseEnter={() => setHighlightedIndex(idx)}
+              onMouseEnter={() => setHighlightedIndex(0)}
               style={{
                 padding: "0.4375rem 0.625rem",
                 borderRadius: "0.375rem",
                 fontSize: "0.875rem",
                 cursor: "pointer",
                 background:
-                  idx === highlightedIndex
+                  highlightedIndex === 0
                     ? "var(--brand-50, rgba(79,70,229,0.1))"
-                    : value === opt
-                    ? "var(--bg-tertiary)"
                     : "transparent",
-                color:
-                  idx === highlightedIndex
-                    ? "var(--brand-600)"
-                    : "var(--text-primary)",
-                fontWeight: value === opt ? 600 : 400,
+                color: "var(--brand-600)",
+                fontWeight: 600,
                 display: "flex",
                 alignItems: "center",
-                gap: "0.5rem",
+                gap: "0.375rem",
               }}
             >
-              {/* Colour swatch for colour options */}
-              {/^#[0-9A-Fa-f]{3,6}$/.test(opt) === false &&
-                ["Red","Blue","Green","White","Black","Yellow","Pink","Orange","Purple","Grey","Navy","Maroon","Beige","Brown","Cream","Sky Blue","Rust","Olive","Teal","Magenta","Coral","Indigo","Lavender","Dark Blue","Dark Green","Light Blue","Light Green","Off White"].includes(opt) && (
-                <span
-                  style={{
-                    width: "0.75rem",
-                    height: "0.75rem",
-                    borderRadius: "50%",
-                    background: colorToHex(opt),
-                    border: "1px solid var(--border-color)",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              {opt}
+              <span>+</span>
+              <span>{customOption}</span>
             </li>
-          ))}
+          )}
+
+          {filtered.map((opt, idx) => {
+            const actualIdx = customOption ? idx + 1 : idx;
+            return (
+              <li
+                key={opt}
+                role="option"
+                aria-selected={value === opt}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectOption(opt);
+                }}
+                onMouseEnter={() => setHighlightedIndex(actualIdx)}
+                style={{
+                  padding: "0.4375rem 0.625rem",
+                  borderRadius: "0.375rem",
+                  fontSize: "0.875rem",
+                  cursor: "pointer",
+                  background:
+                    actualIdx === highlightedIndex
+                      ? "var(--brand-50, rgba(79,70,229,0.1))"
+                      : value === opt
+                      ? "var(--bg-tertiary)"
+                      : "transparent",
+                  color:
+                    actualIdx === highlightedIndex
+                      ? "var(--brand-600)"
+                      : "var(--text-primary)",
+                  fontWeight: value === opt ? 600 : 400,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                {/* Colour swatch for colour options */}
+                {/^#[0-9A-Fa-f]{3,6}$/.test(opt) === false &&
+                  [
+                    "Red","Blue","Green","White","Black","Yellow","Pink","Orange","Purple","Grey",
+                    "Navy","Maroon","Beige","Brown","Cream","Sky Blue","Rust","Olive","Teal",
+                    "Magenta","Coral","Indigo","Lavender","Dark Blue","Dark Green","Light Blue","Light Green","Off White"
+                  ].includes(opt) && (
+                  <span
+                    style={{
+                      width: "0.75rem",
+                      height: "0.75rem",
+                      borderRadius: "50%",
+                      background: colorToHex(opt),
+                      border: "1px solid var(--border-color)",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
+                {opt}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -161,6 +161,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     description, imageUrl, variants,
   } = req.body;
 
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Product name is required' });
+  if (!sku || !sku.trim()) return res.status(400).json({ error: 'SKU is required' });
+  if (!categoryId || !categoryId.trim()) return res.status(400).json({ error: 'Category is required' });
+
   const existing = await prisma.product.findUnique({ where: { sku } });
   if (existing) return res.status(400).json({ error: 'SKU already exists' });
 

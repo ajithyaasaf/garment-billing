@@ -163,6 +163,19 @@ export default function EditProductPage() {
     { key: "variants", label: `Variants (${fields.length})` },
   ] as const;
 
+  const onInvalid = (fieldErrors: any) => {
+    if (fieldErrors.name || fieldErrors.sku || fieldErrors.categoryId) {
+      setActiveTab("basic");
+      toast.error("Please fill in required fields (Name, SKU, Category) in Basic Info tab");
+    } else if (fieldErrors.purchasePrice || fieldErrors.wholesalePrice) {
+      setActiveTab("pricing");
+      toast.error("Please fill in required fields in Pricing tab");
+    } else if (fieldErrors.variants) {
+      setActiveTab("variants");
+      toast.error("Please complete all variant fields");
+    }
+  };
+
   return (
     <div style={{ maxWidth: "800px" }}>
       {/* Header */}
@@ -180,7 +193,7 @@ export default function EditProductPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
+      <form onSubmit={handleSubmit((data) => mutation.mutate(data), onInvalid)}>
         {/* Tabs */}
         <div
           style={{
