@@ -73,7 +73,7 @@ export function QuickPaymentModal({ open, onOpenChange, invoice }: QuickPaymentM
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
-              <button className="btn btn-ghost btn-sm btn-icon">
+              <button type="button" className="btn btn-ghost btn-sm btn-icon">
                 <X size={16} />
               </button>
             </Dialog.Close>

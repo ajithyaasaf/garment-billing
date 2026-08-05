@@ -192,13 +192,62 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   const { variants, ...data } = req.body;
 
-  const product = await prisma.product.update({
-    where: { id: req.params.id },
-    data,
-    include: { category: true, variants: true },
-  });
+  try {
+    const product = await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id: req.params.id },
+        data,
+      });
 
-  res.json(product);
+      if (variants && Array.isArray(variants)) {
+        const existingVariants = await tx.productVariant.findMany({
+          where: { productId: req.params.id },
+        });
+
+        const incomingIds = variants.map((v: any) => v.id).filter(Boolean);
+        const toDelete = existingVariants.filter((v) => !incomingIds.includes(v.id));
+
+        if (toDelete.length > 0) {
+          await tx.productVariant.deleteMany({
+            where: { id: { in: toDelete.map((v) => v.id) } },
+          });
+        }
+
+        for (const v of variants) {
+          if (v.id) {
+            await tx.productVariant.update({
+              where: { id: v.id },
+              data: {
+                color: v.color,
+                size: v.size,
+                stock: Number(v.stock || 0),
+                minStock: Number(v.minStock || 5),
+              },
+            });
+          } else {
+            await tx.productVariant.create({
+              data: {
+                productId: req.params.id,
+                color: v.color,
+                size: v.size,
+                stock: Number(v.stock || 0),
+                minStock: Number(v.minStock || 5),
+              },
+            });
+          }
+        }
+      }
+
+      return tx.product.findUnique({
+        where: { id: req.params.id },
+        include: { category: true, variants: true },
+      });
+    });
+
+    res.json(product);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to update product' });
+  }
 });
 
 // DELETE /api/products/:id (soft delete)

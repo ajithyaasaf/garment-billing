@@ -62,7 +62,7 @@ export function QuickCategoryModal({ open, onOpenChange, onSuccess }: QuickCateg
             <div className="modal-header">
               <h2 style={{ fontSize: "1.125rem", fontWeight: 700, margin: 0 }}>Quick Add Category</h2>
               <Dialog.Close asChild>
-                <button className="btn btn-ghost btn-sm btn-icon" style={{ borderRadius: "50%", padding: "0.25rem" }}>
+                <button type="button" className="btn btn-ghost btn-sm btn-icon" style={{ borderRadius: "50%", padding: "0.25rem" }}>
                   <X size={16} />
                 </button>
               </Dialog.Close>

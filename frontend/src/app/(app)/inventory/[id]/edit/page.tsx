@@ -3,15 +3,31 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { QuickCategoryModal } from "@/components/ui/quick-category-modal";
-import { GENDER_OPTIONS, SLEEVE_TYPE_OPTIONS, GST_SLAB_OPTIONS } from "@/lib/constants";
+import {
+  GENDER_OPTIONS,
+  SLEEVE_TYPE_OPTIONS,
+  GST_SLAB_OPTIONS,
+  COMMON_COLORS,
+  SIZE_GROUPS,
+  ALL_COMMON_SIZES,
+  SizeGroupKey,
+} from "@/lib/constants";
+
+interface ProductVariantItem {
+  id?: string;
+  color: string;
+  size: string;
+  stock: number;
+  minStock: number;
+}
 
 interface ProductForm {
   name: string;
@@ -25,13 +41,14 @@ interface ProductForm {
   wholesalePrice: number;
   retailPrice: number;
   description: string;
+  variants: ProductVariantItem[];
 }
 
 export default function EditProductPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [activeTab, setActiveTab] = useState<"basic" | "pricing">("basic");
+  const [activeTab, setActiveTab] = useState<"basic" | "pricing" | "variants">("basic");
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const { data: product, isLoading: isLoadingProduct } = useQuery({
@@ -49,6 +66,7 @@ export default function EditProductPage() {
     handleSubmit,
     setValue,
     control,
+    reset,
     formState: { errors },
     watch,
   } = useForm<ProductForm>({
@@ -58,24 +76,51 @@ export default function EditProductPage() {
       wholesalePrice: 0,
       retailPrice: 0,
       gender: "UNISEX",
+      variants: [],
     },
   });
 
+  const { fields, append, remove } = useFieldArray({ control, name: "variants" });
+
+  const [activeSizeCategory, setActiveSizeCategory] = useState<SizeGroupKey>("ADULT");
+  const selectedGender = watch("gender");
+
+  useEffect(() => {
+    if (selectedGender === "BABY") {
+      setActiveSizeCategory("BABY");
+    } else if (selectedGender === "KIDS") {
+      setActiveSizeCategory("KIDS");
+    } else {
+      setActiveSizeCategory("ADULT");
+    }
+  }, [selectedGender]);
+
   useEffect(() => {
     if (product) {
-      setValue("name", product.name);
-      setValue("sku", product.sku);
-      setValue("categoryId", product.categoryId);
-      setValue("brand", product.brand || "");
-      setValue("gender", product.gender);
-      setValue("sleeveType", product.sleeveType || "");
-      setValue("gstPercent", product.gstPercent);
-      setValue("purchasePrice", product.purchasePrice);
-      setValue("wholesalePrice", product.wholesalePrice);
-      setValue("retailPrice", product.retailPrice || 0);
-      setValue("description", product.description || "");
+      reset({
+        name: product.name || "",
+        sku: product.sku || "",
+        categoryId: product.categoryId || "",
+        brand: product.brand || "",
+        gender: product.gender || "UNISEX",
+        sleeveType: product.sleeveType || "",
+        gstPercent: product.gstPercent ?? 5,
+        purchasePrice: product.purchasePrice ?? 0,
+        wholesalePrice: product.wholesalePrice ?? 0,
+        retailPrice: product.retailPrice ?? 0,
+        description: product.description || "",
+        variants: product.variants
+          ? product.variants.map((v: { id: string; color: string; size: string; stock: number; minStock: number }) => ({
+              id: v.id,
+              color: v.color,
+              size: v.size,
+              stock: v.stock,
+              minStock: v.minStock,
+            }))
+          : [],
+      });
     }
-  }, [product, setValue]);
+  }, [product, reset]);
 
   const mutation = useMutation({
     mutationFn: async (data: ProductForm) => {
@@ -85,6 +130,11 @@ export default function EditProductPage() {
         purchasePrice: Number(data.purchasePrice),
         wholesalePrice: Number(data.wholesalePrice),
         retailPrice: data.retailPrice ? Number(data.retailPrice) : undefined,
+        variants: data.variants.map((v) => ({
+          ...v,
+          stock: Number(v.stock),
+          minStock: Number(v.minStock),
+        })),
       });
       return res.data;
     },
@@ -109,6 +159,7 @@ export default function EditProductPage() {
   const tabs = [
     { key: "basic", label: "Basic Info" },
     { key: "pricing", label: "Pricing & GST" },
+    { key: "variants", label: `Variants (${fields.length})` },
   ] as const;
 
   return (
@@ -123,7 +174,7 @@ export default function EditProductPage() {
             Edit Product
           </h1>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-            Modify product base settings and pricing
+            Modify product details, pricing, and variants
           </p>
         </div>
       </div>
@@ -358,6 +409,130 @@ export default function EditProductPage() {
                 )}
               </div>
             )}
+
+            {activeTab === "variants" && (
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+                    Manage color and size variants with stock quantities
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => append({ color: "White", size: "M", stock: 0, minStock: 5 })}
+                  >
+                    <Plus size={14} />
+                    Add Variant
+                  </button>
+                </div>
+
+                {/* Quick add buttons with Group Filter Tabs */}
+                <div style={{ marginBottom: "1.25rem", background: "var(--bg-tertiary)", padding: "0.875rem", borderRadius: "0.625rem", border: "1px solid var(--border-color)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.625rem", flexWrap: "wrap", gap: "0.5rem" }}>
+                    <p style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>Quick add sizes:</p>
+                    <div style={{ display: "flex", gap: "0.375rem" }}>
+                      {SIZE_GROUPS.map((group) => (
+                        <button
+                          key={group.key}
+                          type="button"
+                          className={`btn btn-xs ${activeSizeCategory === group.key ? "btn-primary" : "btn-ghost"}`}
+                          style={{ fontSize: "0.6875rem", padding: "0.2rem 0.5rem", borderRadius: "9999px" }}
+                          onClick={() => setActiveSizeCategory(group.key)}
+                        >
+                          {group.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
+                    {SIZE_GROUPS.find((g) => g.key === activeSizeCategory)?.sizes.map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ fontSize: "0.75rem", padding: "0.25rem 0.625rem" }}
+                        onClick={() => append({ color: "White", size, stock: 0, minStock: 5 })}
+                      >
+                        + {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                  {fields.map((field, index) => (
+                    <motion.div
+                      key={field.id}
+                      initial={{ opacity: 0, scale: 0.97 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr auto auto auto",
+                        gap: "0.625rem",
+                        alignItems: "end",
+                        background: "var(--bg-tertiary)",
+                        padding: "0.75rem",
+                        borderRadius: "0.625rem",
+                      }}
+                    >
+                      <div>
+                        <label className="form-label" style={{ fontSize: "0.75rem" }}>Color</label>
+                        <select
+                          className="form-input form-select"
+                          {...register(`variants.${index}.color`, { required: true })}
+                        >
+                          <option value="">Select color</option>
+                          {COMMON_COLORS.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: "0.75rem" }}>Size</label>
+                        <select
+                          className="form-input form-select"
+                          {...register(`variants.${index}.size`, { required: true })}
+                        >
+                          <option value="">Select size</option>
+                          {ALL_COMMON_SIZES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: "0.75rem" }}>Stock</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-input"
+                          style={{ width: "80px" }}
+                          {...register(`variants.${index}.stock`)}
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: "0.75rem" }}>Min Stock</label>
+                        <input
+                          type="number"
+                          min="0"
+                          className="form-input"
+                          style={{ width: "80px" }}
+                          {...register(`variants.${index}.minStock`)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm btn-icon"
+                        style={{ color: "var(--danger)", alignSelf: "flex-end" }}
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -369,7 +544,7 @@ export default function EditProductPage() {
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => {
-                  const order = ["basic", "pricing"] as const;
+                  const order = ["basic", "pricing", "variants"] as const;
                   const currentIdx = order.indexOf(activeTab);
                   setActiveTab(order[currentIdx - 1]);
                 }}
@@ -380,12 +555,12 @@ export default function EditProductPage() {
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <Link href={`/inventory/${id}`} className="btn btn-secondary">Cancel</Link>
-            {activeTab !== "pricing" ? (
+            {activeTab !== "variants" ? (
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => {
-                  const order = ["basic", "pricing"] as const;
+                  const order = ["basic", "pricing", "variants"] as const;
                   const currentIdx = order.indexOf(activeTab);
                   setActiveTab(order[currentIdx + 1]);
                 }}
