@@ -70,6 +70,9 @@ export default function InventoryPage() {
   const hasLowStock = (variants: Product["variants"]) =>
     variants.some((v) => v.stock <= v.minStock);
 
+  const getLowStockVariants = (variants: Product["variants"]) =>
+    variants.filter((v) => v.stock <= v.minStock);
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     try {
@@ -269,30 +272,54 @@ export default function InventoryPage() {
                       </div>
                     </td>
                     <td>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontWeight: 600,
-                            color: hasLowStock(product.variants)
-                              ? "var(--danger)"
-                              : "var(--text-primary)",
-                          }}
-                        >
-                          {getTotalStock(product.variants)}
-                        </span>
-                        {hasLowStock(product.variants) && (
-                          <AlertTriangle size={13} color="var(--warning)" />
-                        )}
-                        <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
-                          ({product.variants.length} variants)
-                        </span>
-                      </div>
+                      {(() => {
+                        const totalStock = getTotalStock(product.variants);
+                        const lowVariants = getLowStockVariants(product.variants);
+                        const isZeroStock = totalStock === 0;
+
+                        return (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: isZeroStock
+                                  ? "#dc2626"
+                                  : totalStock <= 10
+                                  ? "#d97706"
+                                  : "var(--text-primary)",
+                              }}
+                            >
+                              {totalStock} pcs
+                            </span>
+
+                            {lowVariants.length > 0 && (
+                              <span
+                                title={`⚠️ Low Stock Alert on ${lowVariants.length} variant${lowVariants.length > 1 ? "s" : ""}:\n${lowVariants
+                                  .map((v) => `• ${v.color} / ${v.size}: ${v.stock} left (Min: ${v.minStock})`)
+                                  .join("\n")}`}
+                                style={{
+                                  cursor: "help",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "2px",
+                                }}
+                              >
+                                <AlertTriangle size={14} color="#f59e0b" />
+                              </span>
+                            )}
+
+                            <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)" }}>
+                              • {product.variants.length} variants
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>{product.gstPercent}%</td>
                     <td>
