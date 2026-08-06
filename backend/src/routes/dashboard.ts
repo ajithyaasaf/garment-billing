@@ -34,9 +34,9 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       _sum: { totalAmount: true },
       _count: true,
     }),
-    // Low stock count
+    // Low stock count (active products only)
     prisma.productVariant.count({
-      where: { stock: { lte: 5 } },
+      where: { stock: { lte: 5 }, product: { isActive: true } },
     }),
     // Recent invoices
     prisma.invoice.findMany({
@@ -87,8 +87,8 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
       orderBy: { _sum: { quantity: 'desc' } },
       take: 5,
     }),
-    // Total products
-    prisma.product.count(),
+    // Total products (active products only)
+    prisma.product.count({ where: { isActive: true } }),
     // Pending Orders count (WhatsApp bookings to process)
     prisma.order.count({
       where: { status: 'PENDING' },
