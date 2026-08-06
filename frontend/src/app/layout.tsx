@@ -10,10 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GarmentOS – Wholesale ERP | Madurai",
+  title: "GarmentOS – Wholesale & Retail ERP",
   description:
-    "Production-grade wholesale garment stock and billing management system for Madurai bulk dress sellers.",
-  keywords: "garment ERP, wholesale billing, madurai, stock management, invoice",
+    "Production-grade wholesale and retail garment stock, invoice and billing management system.",
+  keywords: "garment ERP, wholesale billing, retail billing, stock management, invoice",
 };
 
 export default function RootLayout({

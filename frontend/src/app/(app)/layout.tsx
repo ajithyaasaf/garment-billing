@@ -141,7 +141,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               GarmentOS
             </div>
             <div style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)" }}>
-              Wholesale ERP
+              Wholesale & Retail ERP
             </div>
           </div>
           <button
