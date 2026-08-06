@@ -50,7 +50,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const [expenses, total] = await Promise.all([
+    const [expenses, total, sumResult] = await Promise.all([
       prisma.expense.findMany({
         where,
         skip,
@@ -61,11 +61,16 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         },
       }),
       prisma.expense.count({ where }),
+      prisma.expense.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
     ]);
 
     res.json({
       data: expenses,
       total,
+      totalAmount: sumResult._sum.amount || 0,
       page: pageNum,
       totalPages: Math.ceil(total / limitNum) || 1,
     });

@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  Calendar,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import api from "@/lib/api";
@@ -48,6 +49,53 @@ export default function ExpensesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
 
+  // Date Range Filter state
+  const [datePreset, setDatePreset] = useState<"ALL" | "TODAY" | "THIS_MONTH" | "LAST_30" | "CUSTOM">("ALL");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const applyDatePreset = (preset: "ALL" | "TODAY" | "THIS_MONTH" | "LAST_30") => {
+    setDatePreset(preset);
+    setCurrentPage(1);
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
+    if (preset === "ALL") {
+      setStartDate("");
+      setEndDate("");
+    } else if (preset === "TODAY") {
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (preset === "THIS_MONTH") {
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+      setStartDate(firstDay);
+      setEndDate(todayStr);
+    } else if (preset === "LAST_30") {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      setStartDate(d.toISOString().split("T")[0]);
+      setEndDate(todayStr);
+    }
+  };
+
+  const handleCustomStartDateChange = (val: string) => {
+    setStartDate(val);
+    setDatePreset("CUSTOM");
+    setCurrentPage(1);
+    if (endDate && val > endDate) {
+      setEndDate(val);
+    }
+  };
+
+  const handleCustomEndDateChange = (val: string) => {
+    setEndDate(val);
+    setDatePreset("CUSTOM");
+    setCurrentPage(1);
+    if (startDate && val < startDate) {
+      setStartDate(val);
+    }
+  };
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -69,13 +117,15 @@ export default function ExpensesPage() {
     },
   });
 
-  // 2. Fetch Expenses List
+  // 2. Fetch Expenses List with Date Range support
   const { data: expensesData, isLoading: isListLoading } = useQuery({
-    queryKey: ["expenses-list", currentPage, categoryFilter, searchQuery],
+    queryKey: ["expenses-list", currentPage, categoryFilter, searchQuery, startDate, endDate],
     queryFn: async () => {
       const params: any = { page: currentPage, limit: pageSize };
       if (categoryFilter && categoryFilter !== "ALL") params.category = categoryFilter;
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
       const res = await api.get("/expenses", { params });
       return res.data;
     },
@@ -301,6 +351,90 @@ export default function ExpensesPage() {
           </div>
         </div>
       )}
+
+      {/* Date Range Filter Bar */}
+      <div className="card" style={{ padding: "0.875rem 1rem" }}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Quick Date Presets */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+              <Calendar size={14} style={{ color: "var(--brand-600)" }} /> Date Filter:
+            </span>
+            <div className="flex gap-1" style={{ background: "var(--bg-tertiary)", padding: "3px", borderRadius: "0.5rem" }}>
+              {[
+                { id: "ALL", label: "All Time" },
+                { id: "TODAY", label: "Today" },
+                { id: "THIS_MONTH", label: "This Month" },
+                { id: "LAST_30", label: "Last 30 Days" },
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`btn btn-xs ${datePreset === p.id ? "btn-primary" : "btn-ghost"}`}
+                  style={{ fontSize: "0.75rem", fontWeight: 600, padding: "0.25rem 0.625rem" }}
+                  onClick={() => applyDatePreset(p.id as any)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Range Pickers & Filtered Subtotal */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="date"
+                className="form-input form-input-sm"
+                style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}
+                value={startDate}
+                onChange={(e) => handleCustomStartDateChange(e.target.value)}
+              />
+              <span style={{ fontSize: "0.75rem", color: "var(--text-tertiary)", fontWeight: 600 }}>to</span>
+              <input
+                type="date"
+                className="form-input form-input-sm"
+                style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}
+                value={endDate}
+                onChange={(e) => handleCustomEndDateChange(e.target.value)}
+              />
+              {(startDate || endDate) && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs text-red-500 hover:bg-red-50"
+                  style={{ padding: "0.25rem 0.375rem" }}
+                  title="Clear Date Filter"
+                  onClick={() => applyDatePreset("ALL")}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Dynamic Total Badge for Active Filter */}
+            {expensesData?.totalAmount !== undefined && (
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  padding: "0.375rem 0.75rem",
+                  borderRadius: "0.5rem",
+                  background: "rgba(16, 185, 129, 0.1)",
+                  color: "#059669",
+                  border: "1px solid rgba(16, 185, 129, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                }}
+              >
+                <span>Filter Total:</span>
+                <span style={{ fontSize: "0.875rem", fontWeight: 800 }}>{formatCurrency(expensesData.totalAmount)}</span>
+                <span style={{ fontSize: "0.6875rem", color: "var(--text-tertiary)", fontWeight: 500 }}>({expensesData.total} items)</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Search & Category Filter Toolbar */}
       <div className="card" style={{ padding: "1rem" }}>
