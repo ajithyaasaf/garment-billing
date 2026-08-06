@@ -22,15 +22,15 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
     totalProducts,
     pendingOrdersCount,
   ] = await Promise.all([
-    // Today's sales total
+    // Today's sales total (excluding cancelled invoices)
     prisma.invoice.aggregate({
-      where: { invoiceDate: { gte: today } },
+      where: { invoiceDate: { gte: today }, status: { not: 'CANCELLED' } },
       _sum: { totalAmount: true },
       _count: true,
     }),
-    // Monthly sales
+    // Monthly sales (excluding cancelled invoices)
     prisma.invoice.aggregate({
-      where: { invoiceDate: { gte: monthStart } },
+      where: { invoiceDate: { gte: monthStart }, status: { not: 'CANCELLED' } },
       _sum: { totalAmount: true },
       _count: true,
     }),
@@ -66,9 +66,9 @@ router.get('/', authenticate, async (_req: AuthRequest, res: Response) => {
         customer: { select: { shopName: true, ownerName: true } },
       },
     }),
-    // Outstanding payments
+    // Outstanding payments (excluding cancelled invoices)
     prisma.invoice.aggregate({
-      where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] } },
+      where: { paymentStatus: { in: ['UNPAID', 'PARTIAL'] }, status: { not: 'CANCELLED' } },
       _sum: { dueAmount: true },
       _count: true,
     }),
